@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impact Dashboard Setup | HUMANBULB Impact Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="admin">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div>
+          <img class="brand-logo" src="assets/humanbulb-logo.png" alt="HUMANBULB logo">
+          <h1>Impact Portal</h1>
+        </div>
+      </div>
+      <nav class="side-nav">
+        <a class="nav-link active" href="admin.html">Setup Workspace</a>
+        <a class="nav-link" href="dashboard.html">Impact Dashboard</a>
+        <a class="nav-link" href="analytics.html">Before & After</a>
+        <a class="nav-link" href="grant-summary.html">Grant Summary</a>
+      </nav>
+      <div class="sidebar-card">
+        <p class="eyebrow">Setup Goal</p>
+        <strong>Upload the program data sources</strong>
+        <p>Report templates are built into the system, so staff only connect the core Google Drive program inputs.</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <section class="page-header">
+        <div>
+          <p class="eyebrow">Impact Dashboard Setup</p>
+          <h2>Upload the Google Drive components for Green Careers Launchpad.</h2>
+          <p class="hero-text">Staff only upload surveys, trackers, testimonials, and photos here. Each category can accept multiple uploads, and the report and grant one-pager templates are already built into the system.</p>
+        </div>
+        <div class="status-pill success">
+          <strong id="setup-progress-label">0 of 7 connected</strong>
+          <span id="setup-progress-note">Waiting for uploads</span>
+        </div>
+      </section>
+
+      <section class="card cohort-input-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Cohort Size</p>
+            <h3>Enter the number of interns in this year's cohort</h3>
+            <p>This gives staff a simple place to record the annual cohort count before uploading the source files.</p>
+          </div>
+        </div>
+        <div class="cohort-input-row">
+          <label class="cohort-input-label" for="cohort-size-input">Number of interns</label>
+          <input class="cohort-input" id="cohort-size-input" type="number" min="0" step="1" inputmode="numeric" placeholder="Enter cohort size">
+        </div>
+      </section>
+
+      <section class="card simple-setup-card">
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Google Drive Components</p>
+            <h3>Required uploads</h3>
+            <p>Built-in system templates: Impact Report and Grant One-Pager. Add as many files as needed to each category.</p>
+          </div>
+          <span class="badge info" id="setup-auto-label">Auto-open dashboard when complete</span>
+        </div>
+        <p class="form-message" id="setup-upload-message" hidden></p>
+        <div class="simple-upload-grid" id="simple-upload-grid"></div>
+        <input id="workspace-file-input" type="file" multiple hidden>
+      </section>
+
+      <section class="card setup-complete-card" id="setup-complete-card" hidden>
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">Setup Complete</p>
+            <h3>Everything is connected.</h3>
+          </div>
+          <span class="badge success">Ready</span>
+        </div>
+        <p>The portal is preparing the Impact Dashboard now.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="dashboard.html">Open Impact Dashboard</a>
+        </div>
+      </section>
+
+      <section class="card page-step-card">
+        <div class="page-step-actions">
+          <div>
+            <p class="eyebrow">Next Step</p>
+            <h3>Continue to the Impact Dashboard</h3>
+          </div>
+          <a class="button primary" href="dashboard.html">Go to Impact Dashboard</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

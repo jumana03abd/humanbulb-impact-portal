@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Theme Concepts | HUMANBULB Impact Portal</title>
+  <style>
+    :root {
+      --bg: #eef3f0;
+      --text: #18352f;
+      --muted: #58736d;
+      --card: rgba(255, 255, 255, 0.86);
+      --border: rgba(17, 74, 61, 0.12);
+      --shadow: 0 20px 45px rgba(24, 53, 47, 0.12);
+      --green: #1e8d67;
+      --blue: #2375b9;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(30, 141, 103, 0.18), transparent 28%),
+        linear-gradient(180deg, #f5faf7, #ebf2f0);
+      padding: 32px;
+    }
+    .wrap { max-width: 1280px; margin: 0 auto; display: grid; gap: 24px; }
+    .hero, .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+    .hero { padding: 32px; }
+    .eyebrow {
+      margin: 0 0 8px;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    h1, h2, h3 { margin: 0; font-family: "Avenir Next Condensed", "Arial Narrow", sans-serif; }
+    h1 { font-size: clamp(2.3rem, 4vw, 4rem); line-height: 1; max-width: 11ch; }
+    p { color: var(--muted); line-height: 1.65; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+    .card { padding: 24px; display: grid; gap: 18px; }
+    .thumb {
+      min-height: 220px;
+      border-radius: 22px;
+      border: 1px solid rgba(17,74,61,.08);
+      overflow: hidden;
+      position: relative;
+    }
+    .thumb::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent, rgba(0,0,0,.08));
+    }
+    .thumb.civic {
+      background:
+        linear-gradient(90deg, #20493f 0 24%, transparent 24%),
+        linear-gradient(180deg, #f7fbf9, #eaf3f0);
+    }
+    .thumb.lab {
+      background:
+        radial-gradient(circle at top right, rgba(25,122,255,.25), transparent 28%),
+        linear-gradient(90deg, #0f1f2d 0 28%, transparent 28%),
+        linear-gradient(180deg, #f6fbff, #e7f3fb);
+    }
+    .thumb.editorial {
+      background:
+        linear-gradient(90deg, #31493f 0 22%, transparent 22%),
+        linear-gradient(180deg, #fbf7ef, #f0e8dc);
+    }
+    .metrics {
+      position: absolute;
+      left: 28%;
+      right: 16px;
+      top: 16px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      min-height: 64px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(17,74,61,.08);
+    }
+    .storyband {
+      position: absolute;
+      inset: auto 16px 16px 28%;
+      height: 66px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.7);
+      border: 1px solid rgba(17,74,61,.08);
+    }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0 18px;
+      border-radius: 999px;
+      text-decoration: none;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(135deg, var(--green), var(--blue));
+      width: fit-content;
+    }
+    ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.7; }
+    @media (max-width: 1100px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <p class="eyebrow">HUMANBULB Theme Concepts</p>
+      <h1>Three distinct directions for the Impact Portal.</h1>
+      <p>Each concept keeps the same product idea but changes the tone, layout emphasis, and presentation style. Your current working MVP stays untouched in the existing setup and dashboard pages.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <div class="thumb civic">
+          <div class="metrics"><div class="metric"></div><div class="metric"></div><div class="metric"></div><div class="metric"></div></div>
+          <div class="storyband"></div>
+        </div>
+        <div>
+          <p class="eyebrow">Concept 1</p>
+          <h2>Clean Civic</h2>
+          <p>A polished nonprofit dashboard with calm green and blue tones, a familiar sidebar, and a simple upload-to-dashboard flow.</p>
+        </div>
+        <ul>
+          <li>Best for grant reviewers and program staff</li>
+          <li>Feels dependable and immediately usable</li>
+          <li>Strong fit for your current MVP direction</li>
+        </ul>
+        <a class="button" href="concept-clean-civic.html">Open Clean Civic</a>
+      </article>
+
+      <article class="card">
+        <div class="thumb lab">
+          <div class="metrics"><div class="metric"></div><div class="metric"></div><div class="metric"></div><div class="metric"></div></div>
+          <div class="storyband"></div>
+        </div>
+        <div>
+          <p class="eyebrow">Concept 2</p>
+          <h2>Modern Data Lab</h2>
+          <p>A more AI-forward split-screen experience with live preview energy, brighter blues, darker framing, and a sharper product feel.</p>
+        </div>
+        <ul>
+          <li>Best if you want the portal to feel innovative</li>
+          <li>Setup and dashboard feel tightly connected</li>
+          <li>Good for demos to partners and funders</li>
+        </ul>
+        <a class="button" href="concept-data-lab.html">Open Data Lab</a>
+      </article>
+
+      <article class="card">
+        <div class="thumb editorial">
+          <div class="metrics"><div class="metric"></div><div class="metric"></div><div class="metric"></div><div class="metric"></div></div>
+          <div class="storyband"></div>
+        </div>
+        <div>
+          <p class="eyebrow">Concept 3</p>
+          <h2>Editorial Nonprofit</h2>
+          <p>A warmer, report-inspired interface that blends uploads, impact storytelling, and grant readiness into a softer, more human presentation.</p>
+        </div>
+        <ul>
+          <li>Best for narrative-driven presentations</li>
+          <li>Feels like an annual report meets a dashboard</li>
+          <li>Strong emphasis on voices and outcomes</li>
+        </ul>
+        <a class="button" href="concept-editorial.html">Open Editorial</a>
+      </article>
+    </section>
+  </div>
+</body>
+</html>

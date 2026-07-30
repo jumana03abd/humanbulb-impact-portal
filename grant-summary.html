@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grant Summary | HUMANBULB Impact Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="grant">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div>
+          <img class="brand-logo" src="assets/humanbulb-logo.png" alt="HUMANBULB logo">
+          <h1>Impact Portal</h1>
+        </div>
+      </div>
+      <nav class="side-nav">
+        <a class="nav-link" href="admin.html">Setup Workspace</a>
+        <a class="nav-link" href="dashboard.html">Impact Dashboard</a>
+        <a class="nav-link" href="analytics.html">Before & After</a>
+        <a class="nav-link active" href="grant-summary.html">Grant Summary</a>
+      </nav>
+      <div class="sidebar-card">
+        <p class="eyebrow">Export Mode</p>
+        <strong>One-page narrative</strong>
+        <p>Designed to convert directly into PDF for grant applications and leadership briefings.</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <section class="page-header">
+        <div>
+          <p class="eyebrow">Grant Summary</p>
+          <h2>Preview of the polished one-page PDF impact brief generated from connected program evidence.</h2>
+        </div>
+        <div class="hero-actions">
+          <a class="button primary" href="#" id="export-pdf-button">Export PDF</a>
+          <a class="button secondary" href="#">Copy Narrative</a>
+        </div>
+      </section>
+
+      <section class="grant-preview-note">
+        <p class="eyebrow">PDF Preview</p>
+        <p>This mock shows how the exported one-page brief would look when formatted for funders, leadership, and grant applications.</p>
+      </section>
+
+      <section class="grant-sheet">
+        <div class="grant-topline">
+          <div>
+            <p class="eyebrow">Green Careers Launchpad</p>
+            <h3>Spring 2026 Impact Summary</h3>
+            <p class="grant-subtitle">One-page impact brief for external reporting and grant submissions</p>
+          </div>
+          <div class="grant-badge">Grant-ready draft</div>
+        </div>
+
+        <div class="grant-meta-row">
+          <div class="grant-meta-item">
+            <span>Prepared for</span>
+            <strong>Leadership and funders</strong>
+          </div>
+          <div class="grant-meta-item">
+            <span>Data sources</span>
+            <strong>Surveys, trackers, testimonials</strong>
+          </div>
+          <div class="grant-meta-item">
+            <span>Reporting period</span>
+            <strong>Spring 2026 cohort</strong>
+          </div>
+        </div>
+
+        <div class="grant-grid">
+          <div class="grant-block">
+            <p class="eyebrow">Executive Summary</p>
+            <p id="grant-executive-summary"></p>
+          </div>
+
+          <div class="grant-block">
+            <p class="eyebrow">Headline Outcomes</p>
+            <div class="grant-metrics" id="grant-metrics"></div>
+          </div>
+
+          <div class="grant-block span-two">
+            <p class="eyebrow">Cohort Milestones</p>
+            <div class="grant-objective-list" id="grant-objective-list"></div>
+          </div>
+
+          <div class="grant-block">
+            <p class="eyebrow">Participant Voice</p>
+            <blockquote id="grant-quote"></blockquote>
+          </div>
+
+          <div class="grant-block span-two">
+            <p class="eyebrow">Grant-Ready Narrative</p>
+            <p id="grant-narrative"></p>
+          </div>
+        </div>
+
+        <div class="grant-footer">
+          <span>HUMANBULB Impact Portal</span>
+          <span>Green Careers Launchpad</span>
+          <span>Page 1 of 1</span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

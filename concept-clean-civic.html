@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clean Civic | HUMANBULB Impact Portal</title>
+  <style>
+    :root {
+      --bg: #ecf4f0; --panel: rgba(255,255,255,.88); --text: #173a33; --muted: #617e77;
+      --green: #1f8f6a; --blue: #2872ba; --border: rgba(14,84,66,.12); --shadow: 0 24px 54px rgba(23,58,51,.12);
+    }
+    * { box-sizing: border-box; } body { margin:0; font-family:"Avenir Next","Segoe UI",sans-serif; color:var(--text); background:linear-gradient(180deg,#f4faf7,#e7f0ed); }
+    .shell { display:grid; grid-template-columns:280px 1fr; gap:24px; padding:24px; min-height:100vh; }
+    .sidebar,.panel { border:1px solid var(--border); border-radius:30px; box-shadow:var(--shadow); }
+    .sidebar { background:linear-gradient(180deg,#20473e,#163238); color:#eefaf6; padding:28px 22px; display:grid; gap:24px; align-content:start; }
+    .brand { display:flex; gap:14px; align-items:center; } .mark { width:50px; height:50px; border-radius:15px; display:grid; place-items:center; background:linear-gradient(135deg,#52bf8b,#3788c9); color:white; font-weight:800; }
+    .nav { display:grid; gap:10px; } .nav a { text-decoration:none; color:rgba(238,250,246,.86); padding:12px 14px; border-radius:14px; } .nav a.active { background:rgba(255,255,255,.12); color:white; }
+    .main { display:grid; gap:24px; } .panel { background:var(--panel); padding:28px; }
+    .eyebrow { margin:0 0 8px; text-transform:uppercase; letter-spacing:.14em; font-size:.72rem; font-weight:700; color:var(--muted); }
+    h1,h2,h3,h4 { margin:0; font-family:"Avenir Next Condensed","Arial Narrow",sans-serif; } h2 { font-size:clamp(2rem,3vw,3.6rem); line-height:1; max-width:12ch; }
+    p { color:var(--muted); line-height:1.65; } .hero { display:grid; grid-template-columns:1.1fr .9fr; gap:24px; }
+    .status { display:inline-flex; align-items:center; gap:10px; padding:12px 16px; border-radius:999px; background:#def0e9; color:#14523e; font-weight:700; }
+    .upload-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+    .upload-card,.metric,.quote { background:rgba(255,255,255,.8); border:1px solid rgba(14,84,66,.08); border-radius:22px; }
+    .upload-card { padding:18px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+    .chip { padding:8px 12px; border-radius:999px; font-size:.8rem; font-weight:700; }
+    .chip.pending { background:#f5e3b8; color:#875d00; } .chip.done { background:#dcf2e8; color:#15533f; }
+    .preview { display:grid; gap:16px; }
+    .metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+    .metric { padding:18px; } .metric strong { font-size:2rem; display:block; margin-top:8px; }
+    .quotes { display:grid; gap:12px; } .quote { padding:16px 18px; }
+    .button { display:inline-flex; align-items:center; justify-content:center; min-height:46px; padding:0 18px; border-radius:999px; color:white; text-decoration:none; font-weight:700; background:linear-gradient(135deg,var(--green),var(--blue)); width:fit-content; }
+    @media (max-width:1100px){ .shell,.hero,.upload-grid,.metrics{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="mark">HB</div><div><div class="eyebrow" style="color:rgba(238,250,246,.7)">HUMANBULB</div><h1>Impact Portal</h1></div></div>
+      <nav class="nav">
+        <a class="active" href="#">Setup Workspace</a>
+        <a href="#">Impact Dashboard</a>
+        <a href="#">Before & After</a>
+        <a href="#">Grant Summary</a>
+      </nav>
+      <div><div class="eyebrow" style="color:rgba(238,250,246,.7)">Theme</div><h3>Clean Civic</h3><p style="color:rgba(238,250,246,.74)">Straightforward, calm, and polished for nonprofit leadership and funder review.</p></div>
+      <a class="button" href="themes.html">Back to Concepts</a>
+    </aside>
+    <main class="main">
+      <section class="panel hero">
+        <div>
+          <p class="eyebrow">Setup Workspace</p>
+          <h2>Simple uploads in, clean dashboard out.</h2>
+          <p>Program coordinators upload the nine required Google Drive components in one place. As soon as setup is complete, the Impact Dashboard opens with evidence-backed metrics and stories.</p>
+          <div class="status">7 of 9 connected</div>
+        </div>
+        <div class="preview">
+          <div class="metrics">
+            <div class="metric"><span class="eyebrow">Interns served</span><strong>48</strong></div>
+            <div class="metric"><span class="eyebrow">Attendance rate</span><strong>91%</strong></div>
+            <div class="metric"><span class="eyebrow">Skill growth</span><strong>+1.4</strong></div>
+            <div class="metric"><span class="eyebrow">Volunteer hours</span><strong>312</strong></div>
+          </div>
+        </div>
+      </section>
+      <section class="panel">
+        <p class="eyebrow">Upload Components</p>
+        <h3>Required Google Drive items</h3>
+        <div class="upload-grid">
+          <div class="upload-card"><div><strong>Week 1 Pre-Survey</strong><p>Google Form</p></div><span class="chip done">Connected</span></div>
+          <div class="upload-card"><div><strong>Weekly Check-In Survey</strong><p>Google Form</p></div><span class="chip done">Connected</span></div>
+          <div class="upload-card"><div><strong>Week 8 Post-Survey</strong><p>Google Form</p></div><span class="chip done">Connected</span></div>
+          <div class="upload-card"><div><strong>Attendance Tracker</strong><p>Google Sheet</p></div><span class="chip done">Connected</span></div>
+          <div class="upload-card"><div><strong>Deliverables Tracker</strong><p>Google Sheet</p></div><span class="chip done">Connected</span></div>
+          <div class="upload-card"><div><strong>Testimonials</strong><p>Google Doc</p></div><span class="chip pending">Upload</span></div>
+          <div class="upload-card"><div><strong>Photos</strong><p>Drive Folder</p></div><span class="chip pending">Upload</span></div>
+          <div class="upload-card"><div><strong>Impact Report Template</strong><p>Google Doc</p></div><span class="chip done">Connected</span></div>
+          <div class="upload-card"><div><strong>Grant One-Pager Template</strong><p>Google Doc</p></div><span class="chip done">Connected</span></div>
+        </div>
+      </section>
+      <section class="panel">
+        <p class="eyebrow">Dashboard Tone</p>
+        <h3>Organized, readable, and leadership-friendly</h3>
+        <div class="quotes">
+          <div class="quote"><strong>Strength</strong><p>This version feels closest to a real production MVP for a nonprofit audience.</p></div>
+          <div class="quote"><strong>Best use</strong><p>Use this when credibility and simplicity matter more than novelty.</p></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Before & After Analytics | HUMANBULB Impact Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="analytics">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div>
+          <img class="brand-logo" src="assets/humanbulb-logo.png" alt="HUMANBULB logo">
+          <h1>Impact Portal</h1>
+        </div>
+      </div>
+      <nav class="side-nav">
+        <a class="nav-link" href="admin.html">Setup Workspace</a>
+        <a class="nav-link" href="dashboard.html">Impact Dashboard</a>
+        <a class="nav-link active" href="analytics.html">Before & After</a>
+        <a class="nav-link" href="grant-summary.html">Grant Summary</a>
+      </nav>
+      <div class="sidebar-card">
+        <p class="eyebrow">Survey Pairing</p>
+        <strong>41 matched responses</strong>
+        <p>Week 1 and Week 8 survey comparisons are shown only for participants with both submissions.</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <section class="page-header">
+        <div>
+          <p class="eyebrow">Before & After Analytics</p>
+          <h2>Compare baseline and post-program growth across skills, confidence, and career readiness.</h2>
+        </div>
+        <div class="status-pill">
+          <strong>Comparison base:</strong>
+          <span>Matched pre/post survey records</span>
+        </div>
+      </section>
+
+      <section class="grid two-col">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Skill Growth</p>
+              <h3>Week 1 vs Week 8 score shifts</h3>
+            </div>
+          </div>
+          <div id="before-after-chart" class="chart-shell tall"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Most Improved Areas</p>
+              <h3>Average percentage improvement by outcome area</h3>
+            </div>
+          </div>
+          <div class="delta-list" id="delta-list"></div>
+        </article>
+      </section>
+
+      <section class="grid two-col">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Response Distribution</p>
+              <h3>Confidence shift by share of cohort</h3>
+            </div>
+          </div>
+          <div id="distribution-chart" class="chart-shell"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Analyst Notes</p>
+              <h3>How this view stays trustworthy</h3>
+            </div>
+          </div>
+          <ul class="check-list">
+            <li>Pre/post charts only include matched respondents.</li>
+            <li>Improvement cards show relative percentage gain from the Week 1 baseline.</li>
+            <li>Unanswered items are excluded instead of assumed.</li>
+            <li>Export notes document sample size and missing-data caveats automatically.</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="card page-step-card">
+        <div class="page-step-actions">
+          <div>
+            <p class="eyebrow">Next Step</p>
+            <h3>Continue to Grant Summary</h3>
+          </div>
+          <a class="button primary" href="grant-summary.html">Go to Grant Summary</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

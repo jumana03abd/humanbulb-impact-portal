@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modern Data Lab | HUMANBULB Impact Portal</title>
+  <style>
+    :root {
+      --bg: #09131d; --panel: rgba(14,25,37,.82); --panel-soft: rgba(255,255,255,.06); --text: #e8f4ff; --muted: #9ab2c9;
+      --cyan: #35b5d6; --blue: #4d7dff; --lime: #4dce9f; --border: rgba(113,164,255,.18);
+    }
+    * { box-sizing: border-box; } body { margin:0; font-family:"Avenir Next","Segoe UI",sans-serif; color:var(--text);
+      background:radial-gradient(circle at top right, rgba(77,125,255,.28), transparent 22%), linear-gradient(180deg,#0a1420,#050b12); }
+    .shell { min-height:100vh; padding:24px; display:grid; gap:24px; }
+    .topbar,.split,.panel { border:1px solid var(--border); border-radius:28px; background:var(--panel); backdrop-filter:blur(18px); }
+    .topbar { padding:24px 28px; display:flex; justify-content:space-between; gap:20px; align-items:center; }
+    .split { display:grid; grid-template-columns:420px 1fr; overflow:hidden; }
+    .left { padding:28px; background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02)); border-right:1px solid var(--border); display:grid; gap:18px; }
+    .right { padding:28px; display:grid; gap:18px; }
+    .eyebrow { margin:0 0 8px; text-transform:uppercase; letter-spacing:.14em; font-size:.72rem; font-weight:700; color:var(--muted); }
+    h1,h2,h3,h4 { margin:0; font-family:"Avenir Next Condensed","Arial Narrow",sans-serif; } h1 { font-size:clamp(2.2rem,3.8vw,4rem); line-height:1; max-width:12ch; }
+    p { color:var(--muted); line-height:1.65; } .status { padding:12px 16px; border-radius:999px; background:rgba(77,206,159,.14); color:#8fe4bf; font-weight:700; }
+    .upload-stack,.preview-grid,.signal-row { display:grid; gap:14px; }
+    .upload-item,.metric,.signal { background:var(--panel-soft); border:1px solid rgba(255,255,255,.08); border-radius:20px; }
+    .upload-item { padding:16px 18px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+    .metric { padding:18px; min-height:120px; } .preview-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .metric strong { display:block; font-size:2rem; margin-top:10px; } .chip { padding:8px 12px; border-radius:999px; font-size:.8rem; font-weight:700; }
+    .chip.blue { background:rgba(77,125,255,.2); color:#cdd8ff; } .chip.green { background:rgba(77,206,159,.18); color:#a8f1d0; }
+    .signal-row { grid-template-columns:1.2fr .8fr; } .signal { padding:18px; }
+    .mini-chart { height:170px; border-radius:18px; background:
+      linear-gradient(180deg, rgba(77,125,255,.18), transparent 65%),
+      repeating-linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.06) 1px, transparent 1px, transparent 34px);
+      position:relative; overflow:hidden; }
+    .mini-chart::after { content:""; position:absolute; left:18px; right:18px; top:80px; height:3px; background:linear-gradient(90deg,#35b5d6,#4dce9f,#4d7dff); transform:skewY(-6deg); border-radius:999px; }
+    .button { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 18px; border-radius:999px; text-decoration:none; font-weight:700; color:white; background:linear-gradient(135deg,var(--cyan),var(--blue)); width:fit-content; }
+    @media (max-width:1100px){ .split,.signal-row,.preview-grid,.topbar{ grid-template-columns:1fr; flex-direction:column; align-items:flex-start; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="topbar">
+      <div>
+        <p class="eyebrow">Concept 2</p>
+        <h1>Modern Data Lab</h1>
+        <p>Split-screen setup with a live-feeling analytics preview. This is the most product-forward and AI-driven direction.</p>
+      </div>
+      <a class="button" href="themes.html">Back to Concepts</a>
+    </section>
+    <section class="split">
+      <div class="left">
+        <div>
+          <p class="eyebrow">Setup Workspace</p>
+          <h2>Connect all Drive inputs</h2>
+          <p>Upload components on the left while the system preview on the right shows what the dashboard will become.</p>
+        </div>
+        <div class="status">Live readiness: 82%</div>
+        <div class="upload-stack">
+          <div class="upload-item"><div><strong>Week 1 Pre-Survey</strong><p>Google Form</p></div><span class="chip green">Connected</span></div>
+          <div class="upload-item"><div><strong>Weekly Check-In Survey</strong><p>Google Form</p></div><span class="chip green">Connected</span></div>
+          <div class="upload-item"><div><strong>Attendance Tracker</strong><p>Google Sheet</p></div><span class="chip green">Connected</span></div>
+          <div class="upload-item"><div><strong>Deliverables Tracker</strong><p>Google Sheet</p></div><span class="chip blue">Waiting</span></div>
+          <div class="upload-item"><div><strong>Testimonials</strong><p>Google Doc</p></div><span class="chip blue">Waiting</span></div>
+          <div class="upload-item"><div><strong>Photos</strong><p>Drive Folder</p></div><span class="chip blue">Waiting</span></div>
+        </div>
+      </div>
+      <div class="right">
+        <div>
+          <p class="eyebrow">Impact Dashboard Preview</p>
+          <h2 style="font-size:2.1rem;max-width:none;">Sharper, more technical, and more AI-forward.</h2>
+        </div>
+        <div class="preview-grid">
+          <div class="metric"><span class="eyebrow">Interns served</span><strong>48</strong><p>3 pathways connected</p></div>
+          <div class="metric"><span class="eyebrow">Attendance rate</span><strong>91%</strong><p>Live tracker sync</p></div>
+          <div class="metric"><span class="eyebrow">Interview confidence</span><strong>+29 pts</strong><p>Derived from pre/post surveys</p></div>
+        </div>
+        <div class="signal-row">
+          <div class="signal"><p class="eyebrow">Model signal</p><div class="mini-chart"></div></div>
+          <div class="signal"><p class="eyebrow">AI Summary</p><p>High participation and strong confidence growth suggest this cohort is especially funder-ready once testimonials and deliverables finish syncing.</p></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

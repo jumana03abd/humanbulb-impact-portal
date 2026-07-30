@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impact Dashboard | HUMANBULB Impact Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="dashboard">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div>
+          <img class="brand-logo" src="assets/humanbulb-logo.png" alt="HUMANBULB logo">
+          <h1>Impact Portal</h1>
+        </div>
+      </div>
+      <nav class="side-nav">
+        <a class="nav-link" href="admin.html">Setup Workspace</a>
+        <a class="nav-link active" href="dashboard.html">Impact Dashboard</a>
+        <a class="nav-link" href="analytics.html">Before & After</a>
+        <a class="nav-link" href="grant-summary.html">Grant Summary</a>
+      </nav>
+      <div class="sidebar-card">
+        <p class="eyebrow">Cohort Snapshot</p>
+        <strong>Spring 2026 cohort</strong>
+        <p>48 interns across clean energy, green construction, and climate justice pathways.</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <section class="page-header">
+        <div>
+          <p class="eyebrow">Impact Dashboard</p>
+          <h2>Generated metrics and grant-ready insights from the connected Google Drive toolkit.</h2>
+        </div>
+        <div class="status-pill success">
+          <strong>Data completeness:</strong>
+          <span>96%</span>
+        </div>
+      </section>
+
+      <section class="grid four-col metrics-grid" id="dashboard-metrics"></section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <p class="eyebrow">Outcome Snapshot</p>
+              <h3>How the cohort is progressing across key milestones</h3>
+            </div>
+            <span class="badge info">6 milestone areas</span>
+          </div>
+          <div class="objective-grid" id="grant-objectives-grid"></div>
+        </article>
+      </section>
+
+      <section class="card page-step-card">
+        <div class="page-step-actions">
+          <div>
+            <p class="eyebrow">Next Step</p>
+            <h3>Continue to Before & After</h3>
+          </div>
+          <a class="button primary" href="analytics.html">Go to Before & After</a>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
