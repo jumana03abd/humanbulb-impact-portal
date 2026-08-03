@@ -378,8 +378,7 @@ function wireLoginPage() {
         body: JSON.stringify({
           email: document.getElementById("signup-email").value,
           password: document.getElementById("signup-password").value,
-          full_name: document.getElementById("signup-name").value,
-          organization_name: document.getElementById("signup-organization").value
+          full_name: document.getElementById("signup-name").value
         })
       });
       window.location.href = "admin.html";

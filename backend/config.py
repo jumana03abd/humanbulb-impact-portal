@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     session_cookie_name: str = Field(default="humanbulb_session", alias="SESSION_COOKIE_NAME")
     session_refresh_cookie_name: str = Field(default="humanbulb_refresh", alias="SESSION_REFRESH_COOKIE_NAME")
     session_cookie_secure: bool = Field(default=False, alias="SESSION_COOKIE_SECURE")
+    portal_organization_name: str = Field(default="HUMANBULB", alias="PORTAL_ORGANIZATION_NAME")
+    portal_organization_slug: str = Field(default="humanbulb", alias="PORTAL_ORGANIZATION_SLUG")
+    allowed_staff_email_domains: str = Field(default="humanbulb.org", alias="ALLOWED_STAFF_EMAIL_DOMAINS")
+    allowed_staff_emails: str = Field(default="", alias="ALLOWED_STAFF_EMAILS")
 
     supabase_url: str = Field(alias="SUPABASE_URL")
     supabase_anon_key: str = Field(alias="SUPABASE_ANON_KEY")

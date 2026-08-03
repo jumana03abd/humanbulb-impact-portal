@@ -60,6 +60,32 @@ class SupabaseAuthClient:
         return response.json()
 
 
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def _allowed_domains(settings: Settings) -> set[str]:
+    return {item.strip().lower() for item in settings.allowed_staff_email_domains.split(",") if item.strip()}
+
+
+def _allowed_emails(settings: Settings) -> set[str]:
+    return {normalize_email(item) for item in settings.allowed_staff_emails.split(",") if item.strip()}
+
+
+def assert_humanbulb_staff_email(email: str) -> None:
+    settings = get_settings()
+    normalized = normalize_email(email)
+    domain = normalized.split("@")[-1] if "@" in normalized else ""
+    if normalized in _allowed_emails(settings):
+        return
+    if domain in _allowed_domains(settings):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Only approved HUMANBULB staff accounts can access this portal.",
+    )
+
+
 def set_session_cookies(response: Response, access_token: str, refresh_token: str | None) -> None:
     settings = get_settings()
     cookie_kwargs = {
@@ -79,33 +105,45 @@ def clear_session_cookies(response: Response) -> None:
     response.delete_cookie(settings.session_refresh_cookie_name, path="/")
 
 
-def ensure_membership(user_id: str, email: str, organization_name: str | None = None) -> tuple[str, str]:
+def ensure_membership(user_id: str, email: str) -> tuple[str, str]:
+    settings = get_settings()
+    assert_humanbulb_staff_email(email)
     membership = fetch_one(
         """
         select om.organization_id, o.name as organization_name
         from organization_members om
         join organizations o on o.id = om.organization_id
-        where om.user_id = %s
+        where om.user_id = %s and o.slug = %s
         limit 1
         """,
-        (user_id,),
+        (user_id, settings.portal_organization_slug),
     )
     if membership:
         return membership["organization_id"], membership["organization_name"]
 
-    derived_name = organization_name or f"{email.split('@')[0].replace('.', ' ').title()} Organization"
-    org = execute_returning(
+    org = fetch_one(
         """
-        insert into organizations (id, name, slug)
-        values (%s, %s, %s)
-        returning id, name
+        select id, name
+        from organizations
+        where slug = %s
+        limit 1
         """,
-        (str(uuid4()), derived_name, f"{email.split('@')[0]}-{uuid4().hex[:8]}"),
+        (settings.portal_organization_slug,),
     )
+    if not org:
+        org = execute_returning(
+            """
+            insert into organizations (id, name, slug)
+            values (%s, %s, %s)
+            returning id, name
+            """,
+            (str(uuid4()), settings.portal_organization_name, settings.portal_organization_slug),
+        )
     execute(
         """
         insert into organization_members (id, organization_id, user_id, role)
         values (%s, %s, %s, %s)
+        on conflict (organization_id, user_id) do nothing
         """,
         (str(uuid4()), org["id"], user_id, "owner"),
     )
@@ -123,6 +161,7 @@ async def authenticate_request(request: Request) -> AuthenticatedUser:
     email = user.get("email")
     if not email:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User email unavailable.")
+    assert_humanbulb_staff_email(email)
     organization_id, organization_name = ensure_membership(user["id"], email)
     return AuthenticatedUser(
         user_id=user["id"],

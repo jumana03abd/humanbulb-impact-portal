@@ -7,7 +7,15 @@ from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Respon
 from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from .auth import AuthenticatedUser, SupabaseAuthClient, authenticate_request, clear_session_cookies, ensure_membership, set_session_cookies
+from .auth import (
+    AuthenticatedUser,
+    SupabaseAuthClient,
+    assert_humanbulb_staff_email,
+    authenticate_request,
+    clear_session_cookies,
+    ensure_membership,
+    set_session_cookies,
+)
 from .config import get_settings
 from .schemas import (
     AnalyticsResponse,
@@ -58,6 +66,7 @@ async def protected_page(path: str, request: Request) -> FileResponse:
 
 @app.post("/api/auth/login")
 async def login(payload: LoginRequest, response: Response) -> dict[str, str]:
+    assert_humanbulb_staff_email(payload.email)
     session = await SupabaseAuthClient(settings).sign_in(payload.email, payload.password)
     access_token = session.get("access_token")
     refresh_token = session.get("refresh_token")
@@ -71,17 +80,18 @@ async def login(payload: LoginRequest, response: Response) -> dict[str, str]:
 
 @app.post("/api/auth/signup")
 async def signup(payload: SignupRequest, response: Response) -> dict[str, str]:
+    assert_humanbulb_staff_email(payload.email)
     session = await SupabaseAuthClient(settings).sign_up(
         payload.email,
         payload.password,
-        {"full_name": payload.full_name or "", "organization_name": payload.organization_name or ""},
+        {"full_name": payload.full_name or "", "organization_name": settings.portal_organization_name},
     )
     user_data = session.get("user") or {}
     if not user_data.get("id"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to create account.")
     access_token = session.get("session", {}).get("access_token")
     refresh_token = session.get("session", {}).get("refresh_token")
-    ensure_membership(user_data["id"], payload.email, payload.organization_name)
+    ensure_membership(user_data["id"], payload.email)
     if access_token:
         set_session_cookies(response, access_token, refresh_token)
     return {"status": "ok"}

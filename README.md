@@ -7,7 +7,7 @@ This project preserves the original multi-page frontend prototype and adds a Pyt
 - Frontend: static HTML/CSS/JavaScript pages already designed for `admin`, `dashboard`, `analytics`, and `grant-summary`
 - Backend: FastAPI app in `backend/`
 - Database: Supabase PostgreSQL
-- Auth: Supabase Auth, mediated through backend session cookies
+- Auth: Supabase Auth, mediated through backend session cookies, with HUMANBULB staff-only access controls
 - File storage: Supabase private storage buckets
 - Spreadsheet processing: `pandas` + `openpyxl`
 - PDF generation: ReportLab
@@ -57,6 +57,8 @@ cp .env.example .env
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `DATABASE_URL`
 - `OPENAI_API_KEY`
+- `ALLOWED_STAFF_EMAIL_DOMAINS`
+- optionally `ALLOWED_STAFF_EMAILS` for individual allowlisting
 
 5. Apply the schema in Supabase SQL editor:
 
@@ -89,6 +91,7 @@ http://127.0.0.1:8000/login.html
 4. Point your domain to the FastAPI app.
 5. Ensure the Supabase database schema and storage buckets exist.
 6. Restrict service-role credentials to the backend only.
+7. Set `PORTAL_ORGANIZATION_NAME`, `PORTAL_ORGANIZATION_SLUG`, and the HUMANBULB staff email allowlist variables in production.
 
 ## Notes
 
@@ -96,3 +99,4 @@ http://127.0.0.1:8000/login.html
 - File validation happens both client-side and server-side.
 - Quantitative metrics are computed in Python, not by AI.
 - The OpenAI API is used only for qualitative narrative generation.
+- Approved users are automatically attached to the single configured HUMANBULB organization, and every project/upload/report query remains scoped to that organization.
