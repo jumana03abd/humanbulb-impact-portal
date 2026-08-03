@@ -50,18 +50,39 @@ class UploadRecord(BaseModel):
     created_at: datetime
 
 
+class UploadFileState(BaseModel):
+    id: str
+    filename: str
+    content_type: str
+    size_bytes: int
+    row_count: int | None = None
+    source_kind: str
+    parsed_summary: dict[str, Any] | None = None
+    created_at: datetime
+
+
 class SetupComponentState(BaseModel):
     id: str
     name: str
     type: str
     uploads: int
-    files: list[str]
+    files: list[UploadFileState]
+
+
+class SetupProgress(BaseModel):
+    total_required: int
+    completed_required: int
+    total_uploads: int
+    is_complete: bool
+    missing_components: list[str]
+    analysis_status: str
 
 
 class ProjectStateResponse(BaseModel):
     user: UserSession
     project: ProjectSummary
     setup_components: list[SetupComponentState]
+    setup_progress: SetupProgress
 
 
 class MetricCard(BaseModel):

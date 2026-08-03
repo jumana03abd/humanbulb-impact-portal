@@ -2,10 +2,12 @@ const appState = {
   user: null,
   project: null,
   setupComponents: [],
+  setupProgress: null,
   dashboard: null,
   analytics: null,
   grant: null,
-  pendingUploadComponentId: null
+  pendingUploadComponentId: null,
+  isPreparingDashboard: false
 };
 
 const COMPONENT_ACCEPT = {
@@ -67,6 +69,58 @@ function setMessage(targetId, message, isError = false) {
   el.hidden = !message;
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatFileSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  let size = bytes;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  const precision = size >= 10 || unitIndex === 0 ? 0 : 1;
+  return `${size.toFixed(precision)} ${units[unitIndex]}`;
+}
+
+function formatTimestamp(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function getUploadMeta(file) {
+  const parts = [];
+  if (file.row_count !== null && file.row_count !== undefined) parts.push(`${file.row_count} rows parsed`);
+  if (file.parsed_summary?.columns?.length) parts.push(`${file.parsed_summary.columns.length} columns`);
+  parts.push(formatFileSize(Number(file.size_bytes)));
+  const uploadedOn = formatTimestamp(file.created_at);
+  if (uploadedOn) parts.push(uploadedOn);
+  return parts.filter(Boolean).join(" · ");
+}
+
+function getUploadSchemaHint(file) {
+  const columns = file.parsed_summary?.columns || [];
+  if (!columns.length) return "";
+  return columns.slice(0, 3).join(", ");
+}
+
+function applyProjectState(payload) {
+  if (payload.user) appState.user = payload.user;
+  if (payload.project) appState.project = payload.project;
+  if (payload.setup_components) appState.setupComponents = payload.setup_components;
+  if (payload.setup_progress) appState.setupProgress = payload.setup_progress;
+}
+
 async function requireSession() {
   if (appState.user) return appState.user;
   appState.user = await apiFetch("/api/auth/me");
@@ -75,9 +129,7 @@ async function requireSession() {
 
 async function loadCurrentProject() {
   const payload = await apiFetch("/api/projects/current");
-  appState.user = payload.user;
-  appState.project = payload.project;
-  appState.setupComponents = payload.setup_components;
+  applyProjectState(payload);
   return payload;
 }
 
@@ -98,58 +150,142 @@ function updateSidebarCopy() {
 }
 
 async function saveCohortSize(value) {
-  if (!appState.project) return;
-  await apiFetch("/api/projects/current/cohort-size", {
+  if (!appState.project) return null;
+  const payload = await apiFetch("/api/projects/current/cohort-size", {
     method: "POST",
     body: JSON.stringify({ cohort_size: value })
   });
-  appState.project.cohort_size = value;
+  applyProjectState(payload);
+  return payload;
+}
+
+async function removeUpload(uploadId) {
+  const payload = await apiFetch(`/api/projects/current/uploads/${uploadId}`, {
+    method: "DELETE"
+  });
+  applyProjectState(payload);
+  return payload;
+}
+
+function setDashboardButtonState(isReady) {
+  ["setup-complete-button", "setup-next-button"].forEach((id) => {
+    const button = document.getElementById(id);
+    if (!button) return;
+    button.disabled = !isReady;
+    button.classList.toggle("is-disabled", !isReady);
+  });
 }
 
 function renderSimpleSetup() {
   const components = appState.setupComponents || [];
+  const progress = appState.setupProgress || {
+    total_required: components.length + 1,
+    completed_required: 0,
+    total_uploads: 0,
+    is_complete: false,
+    missing_components: [],
+    analysis_status: "draft"
+  };
   const cohortSize = Number(appState.project?.cohort_size || 0);
-  const hasCohortSize = cohortSize > 0;
-  const connectedCount = components.filter((item) => item.uploads > 0).length;
-  const totalCount = components.length + 1;
-  const completedCount = connectedCount + (hasCohortSize ? 1 : 0);
-  const totalUploads = components.reduce((sum, item) => sum + item.uploads, 0);
+  const autoLabel = document.getElementById("setup-auto-label");
 
   renderList("simple-upload-grid", components, (item) => `
-    <button class="simple-upload-item button-reset ${item.uploads > 0 ? "connected" : ""}" type="button" data-setup-id="${item.id}">
+    <div class="simple-upload-item ${item.uploads > 0 ? "connected" : ""}">
       <div class="simple-upload-copy">
-        <strong>${item.name}</strong>
-        <span>${item.type} · Multiple uploads allowed</span>
+        <strong>${escapeHtml(item.name)}</strong>
+        <span>${escapeHtml(item.type)} · Multiple uploads allowed</span>
         ${item.files.length ? `
           <div class="upload-file-list">
-            ${item.files.slice(0, 3).map((file) => `<small>${file}</small>`).join("")}
-            ${item.files.length > 3 ? `<small>+${item.files.length - 3} more</small>` : ""}
+            ${item.files.map((file) => `
+              <div class="upload-file-item">
+                <div class="upload-file-body">
+                  <small class="upload-file-name">${escapeHtml(file.filename)}</small>
+                  <small class="upload-file-meta">${escapeHtml(getUploadMeta(file))}</small>
+                  ${getUploadSchemaHint(file) ? `<small class="upload-file-schema">${escapeHtml(getUploadSchemaHint(file))}</small>` : ""}
+                </div>
+                <button class="upload-file-remove button-reset" type="button" data-remove-upload-id="${file.id}" aria-label="Remove ${escapeHtml(file.filename)}">Remove</button>
+              </div>
+            `).join("")}
           </div>
         ` : ""}
       </div>
       <div class="simple-upload-meta">
-        <span class="${item.uploads > 0 ? "connector-chip connected" : "upload-chip pending"}">
+        <button class="simple-upload-trigger button-reset ${item.uploads > 0 ? "connector-chip connected" : "upload-chip pending"}" type="button" data-setup-id="${item.id}">
           ${item.uploads > 0 ? `${item.uploads} uploaded` : "Upload"}
-        </span>
+        </button>
       </div>
-    </button>
+    </div>
   `);
 
   const progressLabel = document.getElementById("setup-progress-label");
   const progressNote = document.getElementById("setup-progress-note");
   const completeCard = document.getElementById("setup-complete-card");
   const cohortInput = document.getElementById("cohort-size-input");
-  if (cohortInput) cohortInput.value = hasCohortSize ? String(cohortSize) : "";
-  if (progressLabel) progressLabel.textContent = `${completedCount} of ${totalCount} connected`;
+  const completeCopy = document.getElementById("setup-complete-copy");
+
+  if (cohortInput) cohortInput.value = cohortSize > 0 ? String(cohortSize) : "";
+  if (progressLabel) progressLabel.textContent = `${progress.completed_required} of ${progress.total_required} connected`;
   if (progressNote) {
-    progressNote.textContent = completedCount === totalCount
-      ? "Ready to continue to the dashboard."
-      : hasCohortSize
-        ? `${cohortSize} interns entered · ${totalUploads} total uploads added so far`
-        : `${totalUploads} total uploads added so far`;
+    progressNote.textContent = progress.is_complete
+      ? (progress.analysis_status === "analyzed" ? "Dashboard is ready" : "Ready to generate dashboard")
+      : progress.missing_components.length
+        ? `Missing: ${progress.missing_components.slice(0, 2).join(", ")}${progress.missing_components.length > 2 ? ` +${progress.missing_components.length - 2} more` : ""}`
+        : `${progress.total_uploads} total uploads added so far`;
   }
-  if (completeCard) completeCard.hidden = completedCount !== totalCount;
-  setMessage("setup-upload-message", "", false);
+  if (autoLabel) {
+    autoLabel.textContent = appState.isPreparingDashboard
+      ? "Generating dashboard..."
+      : progress.analysis_status === "analyzed"
+        ? "Dashboard ready"
+        : "Auto-generate dashboard when complete";
+  }
+  if (completeCard) completeCard.hidden = !progress.is_complete;
+  if (completeCopy) {
+    completeCopy.textContent = progress.analysis_status === "analyzed"
+      ? "The Impact Dashboard is ready to review."
+      : "The portal is ready to generate the Impact Dashboard from the uploaded files.";
+  }
+  setDashboardButtonState(progress.is_complete);
+}
+
+async function prepareDashboardAndContinue(forceMessage = false) {
+  const progress = appState.setupProgress;
+  if (!progress?.is_complete) {
+    if (forceMessage) {
+      setMessage("setup-upload-message", "Finish the cohort size entry and the remaining uploads before continuing.", true);
+    }
+    return;
+  }
+
+  if (progress.analysis_status === "analyzed") {
+    window.location.href = "dashboard.html";
+    return;
+  }
+
+  if (appState.isPreparingDashboard) return;
+  appState.isPreparingDashboard = true;
+  renderSimpleSetup();
+  setMessage("setup-upload-message", "Everything is connected. Generating the Impact Dashboard...");
+
+  try {
+    await apiFetch("/api/projects/current/analyze", { method: "POST", body: "{}" });
+    window.location.href = "dashboard.html";
+  } catch (error) {
+    appState.isPreparingDashboard = false;
+    renderSimpleSetup();
+    setMessage("setup-upload-message", error.message, true);
+  }
+}
+
+function wireSetupNavigation() {
+  ["setup-complete-button", "setup-next-button"].forEach((id) => {
+    const button = document.getElementById(id);
+    if (!button || button.dataset.bound) return;
+    button.dataset.bound = "true";
+    button.addEventListener("click", async () => {
+      await prepareDashboardAndContinue(true);
+    });
+  });
 }
 
 function wireSimpleSetup() {
@@ -161,12 +297,17 @@ function wireSimpleSetup() {
     cohortInput.addEventListener("input", () => {
       const value = Number.parseInt(cohortInput.value, 10);
       const normalized = Number.isFinite(value) && value > 0 ? value : 0;
-      appState.project.cohort_size = normalized;
+      if (appState.project) appState.project.cohort_size = normalized;
       renderSimpleSetup();
       window.clearTimeout(timer);
       timer = window.setTimeout(async () => {
         try {
           await saveCohortSize(normalized);
+          renderSimpleSetup();
+          wireSimpleSetup();
+          if (appState.setupProgress?.is_complete) {
+            await prepareDashboardAndContinue(false);
+          }
         } catch (error) {
           setMessage("setup-upload-message", error.message, true);
         }
@@ -192,12 +333,13 @@ function wireSimpleSetup() {
             body: formData
           });
         }
-        if (payload) {
-          appState.setupComponents = payload.setup_components;
-        }
+        if (payload) applyProjectState(payload);
         renderSimpleSetup();
         wireSimpleSetup();
-        setMessage("setup-upload-message", `${files.length} file${files.length > 1 ? "s" : ""} uploaded successfully.`);
+        setMessage("setup-upload-message", `${files.length} file${files.length > 1 ? "s were" : " was"} uploaded successfully.`);
+        if (appState.setupProgress?.is_complete) {
+          await prepareDashboardAndContinue(false);
+        }
       } catch (error) {
         setMessage("setup-upload-message", error.message, true);
       } finally {
@@ -218,6 +360,28 @@ function wireSimpleSetup() {
       fileInput.click();
     });
   });
+
+  document.querySelectorAll("[data-remove-upload-id]").forEach((button) => {
+    if (button.dataset.bound) return;
+    button.dataset.bound = "true";
+    button.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const uploadId = button.dataset.removeUploadId;
+      if (!uploadId) return;
+      try {
+        setMessage("setup-upload-message", "Removing file...");
+        await removeUpload(uploadId);
+        renderSimpleSetup();
+        wireSimpleSetup();
+        setMessage("setup-upload-message", "File removed.");
+      } catch (error) {
+        setMessage("setup-upload-message", error.message, true);
+      }
+    });
+  });
+
+  wireSetupNavigation();
 }
 
 async function renderAdminPage() {

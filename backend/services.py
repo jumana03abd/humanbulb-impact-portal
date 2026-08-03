@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -57,6 +56,17 @@ def get_or_create_current_project(user: AuthenticatedUser) -> dict[str, Any]:
     )
 
 
+def set_project_status(project_id: str, organization_id: str, status_value: str) -> None:
+    execute(
+        """
+        update projects
+        set status = %s, updated_at = now()
+        where id = %s and organization_id = %s
+        """,
+        (status_value, project_id, organization_id),
+    )
+
+
 def update_cohort_size(project_id: str, organization_id: str, cohort_size: int) -> None:
     execute(
         """
@@ -66,6 +76,7 @@ def update_cohort_size(project_id: str, organization_id: str, cohort_size: int) 
         """,
         (cohort_size, project_id, organization_id),
     )
+    invalidate_saved_analysis(project_id, organization_id)
 
 
 def list_uploads(project_id: str, organization_id: str) -> list[dict[str, Any]]:
@@ -80,10 +91,24 @@ def list_uploads(project_id: str, organization_id: str) -> list[dict[str, Any]]:
     )
 
 
+def _serialize_upload_file(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "filename": row["filename"],
+        "content_type": row["content_type"],
+        "size_bytes": int(row["size_bytes"]),
+        "row_count": row["row_count"],
+        "source_kind": row["source_kind"],
+        "parsed_summary": row.get("parsed_summary") or {},
+        "created_at": row["created_at"],
+    }
+
+
 def build_component_state(upload_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     grouped: dict[str, list[dict[str, Any]]] = {}
     for row in upload_rows:
         grouped.setdefault(row["component"], []).append(row)
+
     state = []
     for component_id, config in COMPONENT_CONFIG.items():
         rows = grouped.get(component_id, [])
@@ -93,10 +118,54 @@ def build_component_state(upload_rows: list[dict[str, Any]]) -> list[dict[str, A
                 "name": config["name"],
                 "type": config["type"],
                 "uploads": len(rows),
-                "files": [row["filename"] for row in rows],
+                "files": [_serialize_upload_file(row) for row in rows],
             }
         )
     return state
+
+
+def build_setup_progress(project: dict[str, Any], upload_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    completed_required = 0
+    total_required = len(COMPONENT_CONFIG) + 1
+    missing_components: list[str] = []
+
+    cohort_size = int(project.get("cohort_size") or 0)
+    if cohort_size > 0:
+        completed_required += 1
+    else:
+        missing_components.append("Cohort size")
+
+    upload_counts = {component_id: 0 for component_id in COMPONENT_CONFIG}
+    for row in upload_rows:
+        upload_counts[row["component"]] = upload_counts.get(row["component"], 0) + 1
+
+    for component_id, config in COMPONENT_CONFIG.items():
+        if upload_counts.get(component_id, 0) > 0:
+            completed_required += 1
+        else:
+            missing_components.append(config["name"])
+
+    return {
+        "total_required": total_required,
+        "completed_required": completed_required,
+        "total_uploads": len(upload_rows),
+        "is_complete": completed_required == total_required,
+        "missing_components": missing_components,
+        "analysis_status": project.get("status") or "draft",
+    }
+
+
+def invalidate_saved_analysis(project_id: str, organization_id: str) -> None:
+    execute(
+        "delete from project_analyses where project_id = %s and organization_id = %s",
+        (project_id, organization_id),
+    )
+
+
+def derive_project_status(project_id: str, organization_id: str, is_complete: bool, has_analysis: bool) -> str:
+    status_value = "analyzed" if has_analysis else ("ready" if is_complete else "draft")
+    set_project_status(project_id, organization_id, status_value)
+    return status_value
 
 
 async def save_upload(user: AuthenticatedUser, project: dict[str, Any], component: str, file: UploadFile) -> dict[str, Any]:
@@ -158,8 +227,34 @@ async def save_upload(user: AuthenticatedUser, project: dict[str, Any], componen
             user.user_id,
         ),
     )
-    execute("update projects set updated_at = now() where id = %s", (project["id"],))
+    invalidate_saved_analysis(project["id"], user.organization_id)
     return record
+
+
+async def delete_upload(user: AuthenticatedUser, project: dict[str, Any], upload_id: str) -> None:
+    row = fetch_one(
+        """
+        select id, storage_path
+        from project_uploads
+        where id = %s and project_id = %s and organization_id = %s
+        limit 1
+        """,
+        (upload_id, project["id"], user.organization_id),
+    )
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload not found.")
+
+    settings = get_settings()
+    await StorageClient(settings).delete_object(settings.supabase_bucket_uploads, row["storage_path"])
+    execute(
+        "delete from project_uploads where id = %s and project_id = %s and organization_id = %s",
+        (upload_id, project["id"], user.organization_id),
+    )
+    invalidate_saved_analysis(project["id"], user.organization_id)
+    execute(
+        "update projects set updated_at = now() where id = %s and organization_id = %s",
+        (project["id"], user.organization_id),
+    )
 
 
 async def load_analysis_input(upload_rows: list[dict[str, Any]]) -> list[UploadDataset]:
@@ -212,6 +307,7 @@ async def analyze_project(user: AuthenticatedUser, project: dict[str, Any]) -> d
         """,
         (str(uuid4()), project["id"], user.organization_id, json.dumps(payload)),
     )
+    set_project_status(project["id"], user.organization_id, "analyzed")
     return payload
 
 

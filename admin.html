@@ -36,7 +36,7 @@
           <p class="hero-text">Staff only upload surveys, trackers, testimonials, and photos here. Each category can accept multiple uploads, and the report and grant one-pager templates are already built into the system.</p>
         </div>
         <div class="status-pill success">
-          <strong id="setup-progress-label">0 of 7 connected</strong>
+          <strong id="setup-progress-label">0 of 8 connected</strong>
           <span id="setup-progress-note">Waiting for uploads</span>
         </div>
       </section>
@@ -62,7 +62,7 @@
             <h3>Required uploads</h3>
             <p>Built-in system templates: Impact Report and Grant One-Pager. Add as many files as needed to each category.</p>
           </div>
-          <span class="badge info" id="setup-auto-label">Auto-open dashboard when complete</span>
+          <span class="badge info" id="setup-auto-label">Auto-generate dashboard when complete</span>
         </div>
         <p class="form-message" id="setup-upload-message" hidden></p>
         <div class="simple-upload-grid" id="simple-upload-grid"></div>
@@ -77,9 +77,9 @@
           </div>
           <span class="badge success">Ready</span>
         </div>
-        <p>The portal is preparing the Impact Dashboard now.</p>
+        <p id="setup-complete-copy">The portal is ready to generate the Impact Dashboard from the uploaded files.</p>
         <div class="hero-actions">
-          <a class="button primary" href="dashboard.html">Open Impact Dashboard</a>
+          <button class="button primary button-reset" id="setup-complete-button" type="button">Generate Impact Dashboard</button>
         </div>
       </section>
 
@@ -89,7 +89,7 @@
             <p class="eyebrow">Next Step</p>
             <h3>Continue to the Impact Dashboard</h3>
           </div>
-          <a class="button primary" href="dashboard.html">Go to Impact Dashboard</a>
+          <button class="button primary button-reset" id="setup-next-button" type="button">Go to Impact Dashboard</button>
         </div>
       </section>
     </main>

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, Response, UploadFile, status
@@ -25,19 +24,23 @@ from .schemas import (
     LoginRequest,
     ProjectStateResponse,
     ProjectSummary,
+    SetupProgress,
     SignupRequest,
     UserSession,
 )
 from .services import (
-    COMPONENT_CONFIG,
     analyze_project,
     build_component_state,
+    build_setup_progress,
+    delete_upload,
+    derive_project_status,
     ensure_analysis,
     generate_and_store_report,
     get_or_create_current_project,
     get_saved_analysis,
     list_uploads,
     save_upload,
+    set_project_status,
     update_cohort_size,
 )
 from .storage import StorageClient
@@ -62,6 +65,27 @@ async def root() -> RedirectResponse:
 async def protected_page(path: str, request: Request) -> FileResponse:
     await authenticate_request(request)
     return FileResponse(ROOT_DIR / path)
+
+
+def build_project_state_payload(user: AuthenticatedUser, project: dict) -> dict:
+    uploads = list_uploads(project["id"], user.organization_id)
+    setup_components = build_component_state(uploads)
+    has_analysis = get_saved_analysis(project["id"], user.organization_id) is not None
+    setup_progress = build_setup_progress(project, uploads)
+    status_value = derive_project_status(project["id"], user.organization_id, setup_progress["is_complete"], has_analysis)
+    project["status"] = status_value
+    setup_progress["analysis_status"] = status_value
+    return {
+        "user": UserSession(
+            user_id=user.user_id,
+            email=user.email,
+            organization_id=user.organization_id,
+            organization_name=user.organization_name,
+        ),
+        "project": ProjectSummary(**project),
+        "setup_components": setup_components,
+        "setup_progress": SetupProgress(**setup_progress),
+    }
 
 
 @app.post("/api/auth/login")
@@ -116,24 +140,15 @@ async def me(user: AuthenticatedUser = Depends(authenticate_request)) -> UserSes
 @app.get("/api/projects/current", response_model=ProjectStateResponse)
 async def current_project(user: AuthenticatedUser = Depends(authenticate_request)) -> ProjectStateResponse:
     project = get_or_create_current_project(user)
-    uploads = list_uploads(project["id"], user.organization_id)
-    return ProjectStateResponse(
-        user=UserSession(
-            user_id=user.user_id,
-            email=user.email,
-            organization_id=user.organization_id,
-            organization_name=user.organization_name,
-        ),
-        project=ProjectSummary(**project),
-        setup_components=build_component_state(uploads),
-    )
+    return ProjectStateResponse(**build_project_state_payload(user, project))
 
 
 @app.post("/api/projects/current/cohort-size")
-async def save_cohort_size(payload: CohortSizeRequest, user: AuthenticatedUser = Depends(authenticate_request)) -> dict[str, int]:
+async def save_cohort_size(payload: CohortSizeRequest, user: AuthenticatedUser = Depends(authenticate_request)) -> dict[str, object]:
     project = get_or_create_current_project(user)
     update_cohort_size(project["id"], user.organization_id, payload.cohort_size)
-    return {"cohort_size": payload.cohort_size}
+    project["cohort_size"] = payload.cohort_size
+    return build_project_state_payload(user, project)
 
 
 @app.post("/api/projects/current/uploads")
@@ -143,14 +158,28 @@ async def upload_project_file(
     user: AuthenticatedUser = Depends(authenticate_request),
 ) -> dict[str, object]:
     project = get_or_create_current_project(user)
-    record = await save_upload(user, project, component, file)
-    uploads = list_uploads(project["id"], user.organization_id)
-    return {"upload": record, "setup_components": build_component_state(uploads)}
+    await save_upload(user, project, component, file)
+    return build_project_state_payload(user, project)
+
+
+@app.delete("/api/projects/current/uploads/{upload_id}")
+async def remove_project_upload(upload_id: str, user: AuthenticatedUser = Depends(authenticate_request)) -> dict[str, object]:
+    project = get_or_create_current_project(user)
+    await delete_upload(user, project, upload_id)
+    return build_project_state_payload(user, project)
 
 
 @app.post("/api/projects/current/analyze")
 async def trigger_analysis(user: AuthenticatedUser = Depends(authenticate_request)) -> dict[str, str]:
     project = get_or_create_current_project(user)
+    uploads = list_uploads(project["id"], user.organization_id)
+    setup_progress = build_setup_progress(project, uploads)
+    if not setup_progress["is_complete"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Complete the cohort size entry and all required uploads before generating the dashboard.",
+        )
+    set_project_status(project["id"], user.organization_id, "analyzing")
     await analyze_project(user, project)
     return {"status": "ok"}
 
@@ -186,7 +215,6 @@ async def analytics(user: AuthenticatedUser = Depends(authenticate_request)) -> 
 async def grant_summary(user: AuthenticatedUser = Depends(authenticate_request)) -> GrantSummaryResponse:
     project = get_or_create_current_project(user)
     analysis = await ensure_analysis(user, project)
-    latest_report = None
     from .db import fetch_one
 
     latest_report = fetch_one(

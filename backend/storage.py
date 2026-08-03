@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import BinaryIO
 from urllib.parse import quote
 
 import httpx
@@ -39,3 +38,16 @@ class StorageClient:
             )
         response.raise_for_status()
         return response.content
+
+    async def delete_object(self, bucket: str, path: str) -> None:
+        encoded_path = "/".join(quote(part, safe="") for part in Path(path).parts)
+        async with httpx.AsyncClient(timeout=60) as client:
+            response = await client.delete(
+                f"{self.base_url}/storage/v1/object/{bucket}/{encoded_path}",
+                headers={
+                    "apikey": self.settings.supabase_service_role_key,
+                    "Authorization": f"Bearer {self.settings.supabase_service_role_key}",
+                },
+            )
+        if response.status_code not in {200, 204, 404}:
+            response.raise_for_status()
