@@ -365,7 +365,10 @@ function wireLoginPage() {
       });
       window.location.href = "admin.html";
     } catch (error) {
-      setMessage("auth-message", error.message, true);
+      const message = error.message === "Only approved HUMANBULB staff accounts can access this portal."
+        ? "Access is limited to approved HUMANBULB staff. Please sign in with Brittany, Charlotte, or Henry's staff account or contact an administrator."
+        : error.message;
+      setMessage("auth-message", message, true);
     }
   });
 
@@ -383,7 +386,10 @@ function wireLoginPage() {
       });
       window.location.href = "admin.html";
     } catch (error) {
-      setMessage("auth-message", error.message, true);
+      const message = error.message === "Only approved HUMANBULB staff accounts can access this portal."
+        ? "Access is limited to approved HUMANBULB staff. Please sign in with Brittany, Charlotte, or Henry's staff account or contact an administrator."
+        : error.message;
+      setMessage("auth-message", message, true);
     }
   });
 }

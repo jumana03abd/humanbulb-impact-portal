@@ -57,8 +57,8 @@ cp .env.example .env
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `DATABASE_URL`
 - `OPENAI_API_KEY`
-- `ALLOWED_STAFF_EMAIL_DOMAINS`
-- optionally `ALLOWED_STAFF_EMAILS` for individual allowlisting
+- `ALLOWED_STAFF_EMAILS` for the exact HUMANBULB staff accounts that can access the portal
+- optionally `ALLOWED_STAFF_EMAIL_DOMAINS` only if you want domain-wide fallback access
 
 5. Apply the schema in Supabase SQL editor:
 
@@ -100,3 +100,4 @@ http://127.0.0.1:8000/login.html
 - Quantitative metrics are computed in Python, not by AI.
 - The OpenAI API is used only for qualitative narrative generation.
 - Approved users are automatically attached to the single configured HUMANBULB organization, and every project/upload/report query remains scoped to that organization.
+- If `ALLOWED_STAFF_EMAILS` is populated, only those exact email addresses can sign in. Domain matching is used only when the exact-email allowlist is empty.

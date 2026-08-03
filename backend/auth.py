@@ -75,9 +75,15 @@ def _allowed_emails(settings: Settings) -> set[str]:
 def assert_humanbulb_staff_email(email: str) -> None:
     settings = get_settings()
     normalized = normalize_email(email)
+    explicit_emails = _allowed_emails(settings)
     domain = normalized.split("@")[-1] if "@" in normalized else ""
-    if normalized in _allowed_emails(settings):
-        return
+    if explicit_emails:
+        if normalized in explicit_emails:
+            return
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only approved HUMANBULB staff accounts can access this portal.",
+        )
     if domain in _allowed_domains(settings):
         return
     raise HTTPException(
