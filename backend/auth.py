@@ -20,6 +20,8 @@ class AuthenticatedUser:
 
 
 class SupabaseAuthClient:
+    """Minimal wrapper around the Supabase Auth HTTP API."""
+
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.base_url = settings.supabase_url.rstrip("/")
@@ -61,18 +63,22 @@ class SupabaseAuthClient:
 
 
 def normalize_email(email: str) -> str:
+    """Normalize email input so allowlist and membership checks are consistent."""
     return email.strip().lower()
 
 
 def _allowed_domains(settings: Settings) -> set[str]:
+    """Parse the optional fallback staff-domain allowlist from environment settings."""
     return {item.strip().lower() for item in settings.allowed_staff_email_domains.split(",") if item.strip()}
 
 
 def _allowed_emails(settings: Settings) -> set[str]:
+    """Parse the explicit staff-email allowlist used for HUMANBULB portal access."""
     return {normalize_email(item) for item in settings.allowed_staff_emails.split(",") if item.strip()}
 
 
 def assert_humanbulb_staff_email(email: str) -> None:
+    """Reject any sign-in or signup attempt outside the approved staff list."""
     settings = get_settings()
     normalized = normalize_email(email)
     explicit_emails = _allowed_emails(settings)
@@ -93,6 +99,7 @@ def assert_humanbulb_staff_email(email: str) -> None:
 
 
 def set_session_cookies(response: Response, access_token: str, refresh_token: str | None) -> None:
+    """Persist the Supabase session in httpOnly cookies for the static frontend."""
     settings = get_settings()
     cookie_kwargs = {
         "httponly": True,
@@ -106,12 +113,14 @@ def set_session_cookies(response: Response, access_token: str, refresh_token: st
 
 
 def clear_session_cookies(response: Response) -> None:
+    """Remove auth cookies from the browser during logout or session reset."""
     settings = get_settings()
     response.delete_cookie(settings.session_cookie_name, path="/")
     response.delete_cookie(settings.session_refresh_cookie_name, path="/")
 
 
 def ensure_membership(user_id: str, email: str) -> tuple[str, str]:
+    """Ensure the authenticated user is attached to the configured HUMANBULB org."""
     settings = get_settings()
     assert_humanbulb_staff_email(email)
     membership = fetch_one(
@@ -157,6 +166,7 @@ def ensure_membership(user_id: str, email: str) -> tuple[str, str]:
 
 
 async def authenticate_request(request: Request) -> AuthenticatedUser:
+    """Resolve the signed-in staff member from the session cookie on each request."""
     settings = get_settings()
     access_token = request.cookies.get(settings.session_cookie_name)
     if not access_token:

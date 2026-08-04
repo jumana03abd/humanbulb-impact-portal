@@ -29,10 +29,12 @@ COMPONENT_CONFIG = {
 
 
 def now_utc() -> datetime:
+    """Provide a timezone-aware UTC timestamp for stored portal records."""
     return datetime.now(timezone.utc)
 
 
 def get_or_create_current_project(user: AuthenticatedUser) -> dict[str, Any]:
+    """Return the latest project for an organization or create a fresh cohort shell."""
     project = fetch_one(
         """
         select id, organization_id, name, cohort_year, cohort_size, status, created_at, updated_at
@@ -57,6 +59,7 @@ def get_or_create_current_project(user: AuthenticatedUser) -> dict[str, Any]:
 
 
 def set_project_status(project_id: str, organization_id: str, status_value: str) -> None:
+    """Update the project status shown across the admin and reporting views."""
     execute(
         """
         update projects
@@ -68,6 +71,7 @@ def set_project_status(project_id: str, organization_id: str, status_value: str)
 
 
 def update_cohort_size(project_id: str, organization_id: str, cohort_size: int) -> None:
+    """Save cohort size changes and invalidate stale derived analysis outputs."""
     execute(
         """
         update projects
@@ -80,6 +84,7 @@ def update_cohort_size(project_id: str, organization_id: str, cohort_size: int) 
 
 
 def list_uploads(project_id: str, organization_id: str) -> list[dict[str, Any]]:
+    """Fetch all uploaded source files for the active organization project."""
     return fetch_all(
         """
         select id, component, filename, content_type, size_bytes, row_count, source_kind, parsed_summary, created_at, storage_path
@@ -92,6 +97,7 @@ def list_uploads(project_id: str, organization_id: str) -> list[dict[str, Any]]:
 
 
 def _serialize_upload_file(row: dict[str, Any]) -> dict[str, Any]:
+    """Convert a raw upload row into the frontend-friendly file metadata shape."""
     return {
         "id": row["id"],
         "filename": row["filename"],
@@ -156,6 +162,7 @@ def build_setup_progress(project: dict[str, Any], upload_rows: list[dict[str, An
 
 
 def invalidate_saved_analysis(project_id: str, organization_id: str) -> None:
+    """Drop cached analysis whenever source uploads or cohort size change."""
     execute(
         "delete from project_analyses where project_id = %s and organization_id = %s",
         (project_id, organization_id),
@@ -163,12 +170,14 @@ def invalidate_saved_analysis(project_id: str, organization_id: str) -> None:
 
 
 def derive_project_status(project_id: str, organization_id: str, is_complete: bool, has_analysis: bool) -> str:
+    """Derive the user-facing project status from setup and analysis readiness."""
     status_value = "analyzed" if has_analysis else ("ready" if is_complete else "draft")
     set_project_status(project_id, organization_id, status_value)
     return status_value
 
 
 async def save_upload(user: AuthenticatedUser, project: dict[str, Any], component: str, file: UploadFile) -> dict[str, Any]:
+    """Validate, store, and catalog a newly uploaded program source file."""
     if component not in COMPONENT_CONFIG:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown upload category.")
 
@@ -232,6 +241,7 @@ async def save_upload(user: AuthenticatedUser, project: dict[str, Any], componen
 
 
 async def delete_upload(user: AuthenticatedUser, project: dict[str, Any], upload_id: str) -> None:
+    """Remove an uploaded file from storage and the project catalog."""
     row = fetch_one(
         """
         select id, storage_path
@@ -258,6 +268,7 @@ async def delete_upload(user: AuthenticatedUser, project: dict[str, Any], upload
 
 
 async def load_analysis_input(upload_rows: list[dict[str, Any]]) -> list[UploadDataset]:
+    """Read every uploaded file into normalized datasets for downstream analysis."""
     settings = get_settings()
     storage = StorageClient(settings)
     datasets: list[UploadDataset] = []
@@ -280,6 +291,7 @@ async def load_analysis_input(upload_rows: list[dict[str, Any]]) -> list[UploadD
 
 
 async def analyze_project(user: AuthenticatedUser, project: dict[str, Any]) -> dict[str, Any]:
+    """Read the uploaded data sources, calculate metrics, and persist the result."""
     uploads = list_uploads(project["id"], user.organization_id)
     datasets = await load_analysis_input(uploads)
     analysis = build_analysis(project, datasets)
@@ -312,6 +324,7 @@ async def analyze_project(user: AuthenticatedUser, project: dict[str, Any]) -> d
 
 
 def get_saved_analysis(project_id: str, organization_id: str) -> dict[str, Any] | None:
+    """Return the latest persisted analysis payload for the active project, if any."""
     row = fetch_one(
         """
         select payload, calculated_at
@@ -330,6 +343,7 @@ def get_saved_analysis(project_id: str, organization_id: str) -> dict[str, Any] 
 
 
 async def ensure_analysis(user: AuthenticatedUser, project: dict[str, Any]) -> dict[str, Any]:
+    """Return cached analysis when possible, otherwise generate it on demand."""
     analysis = get_saved_analysis(project["id"], user.organization_id)
     if analysis:
         return analysis
@@ -337,6 +351,7 @@ async def ensure_analysis(user: AuthenticatedUser, project: dict[str, Any]) -> d
 
 
 async def generate_and_store_report(user: AuthenticatedUser, project: dict[str, Any], analysis: dict[str, Any]) -> dict[str, Any]:
+    """Render the current grant summary into a PDF and store it in Supabase."""
     pdf_bytes = generate_grant_pdf(
         project,
         {

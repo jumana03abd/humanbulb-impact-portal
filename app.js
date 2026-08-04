@@ -10,6 +10,7 @@ const appState = {
   isPreparingDashboard: false
 };
 
+// File extensions allowed per admin workspace upload category.
 const COMPONENT_ACCEPT = {
   pre: ".csv,.xlsx",
   weekly: ".csv,.xlsx",
@@ -21,6 +22,7 @@ const COMPONENT_ACCEPT = {
 };
 
 function metricMarkup(metric) {
+  // Build one dashboard metric card from the API response payload.
   return `
     <article class="metric-card">
       <p class="eyebrow">${metric.label}</p>
@@ -31,12 +33,14 @@ function metricMarkup(metric) {
 }
 
 function renderList(targetId, items, template) {
+  // Render a repeated list of cards/rows into a target container.
   const el = document.getElementById(targetId);
   if (!el) return;
   el.innerHTML = items.map(template).join("");
 }
 
 async function apiFetch(url, options = {}) {
+  // Handle API requests and normalize auth/error behavior.
   const response = await fetch(url, {
     credentials: "include",
     ...options,
@@ -65,6 +69,7 @@ async function apiFetch(url, options = {}) {
 }
 
 function setMessage(targetId, message, isError = false) {
+  // Show inline success/error feedback without interrupting the current screen.
   const el = document.getElementById(targetId);
   if (!el) return;
   el.textContent = message || "";
@@ -73,6 +78,7 @@ function setMessage(targetId, message, isError = false) {
 }
 
 function escapeHtml(value) {
+  // Escape user/file text before inserting it into template strings.
   return String(value || "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -82,6 +88,7 @@ function escapeHtml(value) {
 }
 
 function formatFileSize(bytes) {
+  // Convert raw byte counts into readable file sizes for the upload UI.
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB"];
   let size = bytes;
@@ -95,6 +102,7 @@ function formatFileSize(bytes) {
 }
 
 function formatTimestamp(value) {
+  // Format upload timestamps into short, friendly labels.
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -102,6 +110,7 @@ function formatTimestamp(value) {
 }
 
 function getUploadMeta(file) {
+  // Build the compact upload summary shown beneath each uploaded filename.
   const parts = [];
   if (file.row_count !== null && file.row_count !== undefined) parts.push(`${file.row_count} rows parsed`);
   if (file.parsed_summary?.columns?.length) parts.push(`${file.parsed_summary.columns.length} columns`);
@@ -112,12 +121,14 @@ function getUploadMeta(file) {
 }
 
 function getUploadSchemaHint(file) {
+  // Surface a few parsed column names so staff can confirm they uploaded the right sheet.
   const columns = file.parsed_summary?.columns || [];
   if (!columns.length) return "";
   return columns.slice(0, 3).join(", ");
 }
 
 function applyProjectState(payload) {
+  // Keep the current workspace/project state in sync with every API response.
   if (payload.user) appState.user = payload.user;
   if (payload.project) appState.project = payload.project;
   if (payload.setup_components) appState.setupComponents = payload.setup_components;
@@ -125,18 +136,21 @@ function applyProjectState(payload) {
 }
 
 async function requireSession() {
+  // Fetch the current staff session once and reuse it across the page lifecycle.
   if (appState.user) return appState.user;
   appState.user = await apiFetch("/api/auth/me");
   return appState.user;
 }
 
 async function loadCurrentProject() {
+  // Load the project, uploads, and setup progress that power the admin workflow.
   const payload = await apiFetch("/api/projects/current");
   applyProjectState(payload);
   return payload;
 }
 
 function updateSidebarCopy() {
+  // Adjust sidebar context so each screen reflects the current project state.
   const sidebarStrong = document.querySelector(".sidebar-card strong");
   const sidebarParagraph = document.querySelector(".sidebar-card p:last-child");
   if (!appState.project || !sidebarStrong || !sidebarParagraph) return;
@@ -153,6 +167,7 @@ function updateSidebarCopy() {
 }
 
 async function saveCohortSize(value) {
+  // Persist the cohort size entered by staff during setup.
   if (!appState.project) return null;
   const payload = await apiFetch("/api/projects/current/cohort-size", {
     method: "POST",
@@ -163,6 +178,7 @@ async function saveCohortSize(value) {
 }
 
 async function removeUpload(uploadId) {
+  // Remove a single uploaded file from the active project.
   const payload = await apiFetch(`/api/projects/current/uploads/${uploadId}`, {
     method: "DELETE"
   });
@@ -171,6 +187,7 @@ async function removeUpload(uploadId) {
 }
 
 function setDashboardButtonState(isReady) {
+  // Enable navigation only when all required setup sources are connected.
   ["setup-complete-button", "setup-next-button"].forEach((id) => {
     const button = document.getElementById(id);
     if (!button) return;
@@ -180,6 +197,7 @@ function setDashboardButtonState(isReady) {
 }
 
 function renderSimpleSetup() {
+  // Render the simplified upload-first admin workspace requested for the MVP.
   const components = appState.setupComponents || [];
   const progress = appState.setupProgress || {
     total_required: components.length + 1,
@@ -252,6 +270,7 @@ function renderSimpleSetup() {
 }
 
 async function prepareDashboardAndContinue(forceMessage = false) {
+  // Generate quantitative and qualitative outputs only after the workspace is complete.
   const progress = appState.setupProgress;
   if (!progress?.is_complete) {
     if (forceMessage) {
@@ -281,6 +300,7 @@ async function prepareDashboardAndContinue(forceMessage = false) {
 }
 
 function wireSetupNavigation() {
+  // Move staff from setup into dashboard generation once the workspace is complete.
   ["setup-complete-button", "setup-next-button"].forEach((id) => {
     const button = document.getElementById(id);
     if (!button || button.dataset.bound) return;
@@ -292,6 +312,7 @@ function wireSetupNavigation() {
 }
 
 function wireSimpleSetup() {
+  // Attach all upload, remove, and cohort-size behaviors for the admin setup page.
   const cohortInput = document.getElementById("cohort-size-input");
   const fileInput = document.getElementById("workspace-file-input");
   if (cohortInput && !cohortInput.dataset.bound) {
@@ -388,6 +409,7 @@ function wireSimpleSetup() {
 }
 
 async function renderAdminPage() {
+  // Boot the setup workspace with the current organization project state.
   await requireSession();
   await loadCurrentProject();
   renderSimpleSetup();
@@ -395,6 +417,7 @@ async function renderAdminPage() {
 }
 
 async function renderDashboardPage() {
+  // Render the KPI-style impact dashboard using analyzed backend results.
   await requireSession();
   await loadCurrentProject();
   const payload = await apiFetch("/api/projects/current/dashboard");
@@ -423,6 +446,7 @@ async function renderDashboardPage() {
 }
 
 async function renderAnalyticsPage() {
+  // Render the before/after comparison page and response distribution charts.
   await requireSession();
   await loadCurrentProject();
   const payload = await apiFetch("/api/projects/current/analytics");
@@ -451,6 +475,7 @@ async function renderAnalyticsPage() {
 }
 
 async function renderGrantPage() {
+  // Render the grant-summary screen that previews the eventual exported PDF.
   await requireSession();
   await loadCurrentProject();
   const payload = await apiFetch("/api/projects/current/grant-summary");
@@ -502,6 +527,7 @@ function wireGrantExport() {
 }
 
 function wireLoginPage() {
+  // Two-step staff authentication flow: email first, then password creation/sign-in.
   const emailStep = document.getElementById("email-step");
   const passwordStep = document.getElementById("password-step");
   const emailForm = document.getElementById("email-step-form");
@@ -639,6 +665,7 @@ function wireLoginPage() {
 }
 
 function renderGroupedHorizontalChart(targetId, items, options) {
+  // Draw the paired Week 1 vs Week 8 horizontal comparison bars in SVG.
   const el = document.getElementById(targetId);
   if (!el) return;
   const width = 720;
@@ -670,6 +697,7 @@ function renderGroupedHorizontalChart(targetId, items, options) {
 }
 
 function renderStackedBars(targetId, items) {
+  // Draw the response-distribution comparison chart for the analytics page.
   const el = document.getElementById(targetId);
   if (!el) return;
   const width = 680;
@@ -714,6 +742,7 @@ function renderStackedBars(targetId, items) {
 }
 
 async function boot() {
+  // Lightweight page router for the static multi-page frontend.
   const page = document.body.dataset.page;
   try {
     if (page === "login") {
