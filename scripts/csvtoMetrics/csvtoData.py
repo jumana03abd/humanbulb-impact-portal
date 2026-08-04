@@ -71,4 +71,4 @@ def analyze_progress(week1_file: str, week8_file: str):
         print(f"{metric:<38} | {data['improved']:<10} | {data['same']:<10} | {data['decreased']:<10} | {pct:>6.1f}%")
 
 if __name__ == "__main__":
-    analyze_progress("week1.csv", "week8.csv")
+    analyze_progress("scripts/csvtoMetrics/week1.csv", "scripts/csvtoMetrics/week8.csv")

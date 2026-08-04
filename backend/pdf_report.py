@@ -1,3 +1,14 @@
+"""
+This file is essentially a template engine for a one-page impact report. It takes structured data (project, analysis, and narrative) and produces a professional-looking PDF with:
+
+A branded header and footer
+Project title and reporting information
+Executive summary
+Four headline KPI cards
+A table of program objectives versus actual outcomes
+A participant testimonial
+A grant-ready narrative
+"""
 from __future__ import annotations
 
 from io import BytesIO
