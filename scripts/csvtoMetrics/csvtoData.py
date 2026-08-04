@@ -12,7 +12,7 @@ METRICS = [
     'Initiative/leadership',
     'Professional Workplace'
 ]
-
+# Compares two files("week1.csv","week8.csv") and prints metrics
 def analyze_progress(week1_file: str, week8_file: str):
     # Map participant name -> list of responses
     week8_data = {}

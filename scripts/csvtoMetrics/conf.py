@@ -1,3 +1,4 @@
+ #Class to parse confidence level/ratings; higher is better
 from enum import IntEnum
 import string
 import random
@@ -43,5 +44,3 @@ def randConf():
                 return "slightly confident"
             case 3:
                 return "very confident"
-# def compare(rowList1, rowList2):
-#     for i in range()

@@ -1,3 +1,4 @@
+#Generates a random week 8 file; Usable only for testing
 import csv
 import random
 import conf
