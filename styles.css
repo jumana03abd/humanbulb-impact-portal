@@ -265,10 +265,40 @@ body::after {
   padding: 32px;
 }
 
+.auth-step {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-email-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: rgba(217, 229, 242, 0.72);
+  border: 1px solid rgba(15, 39, 71, 0.08);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.auth-step-actions {
+  justify-content: space-between;
+}
+
 .auth-form {
   display: grid;
   gap: 16px;
   margin-top: 20px;
+}
+
+.auth-form[hidden] {
+  display: none;
+}
+
+.auth-toggle {
+  margin-top: 24px;
 }
 
 .auth-form label {
@@ -278,14 +308,30 @@ body::after {
   font-weight: 700;
 }
 
+.password-field {
+  position: relative;
+}
+
 .auth-form input {
+  width: 100%;
   min-height: 50px;
-  padding: 0 16px;
+  padding: 0 72px 0 16px;
   border-radius: 16px;
   border: 1px solid rgba(15, 39, 71, 0.12);
   background: rgba(255, 255, 255, 0.9);
   font: inherit;
   color: var(--text);
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  color: var(--blue);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
 }
 
 .auth-form input:focus {

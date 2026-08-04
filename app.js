@@ -46,18 +46,21 @@ async function apiFetch(url, options = {}) {
     }
   });
 
-  if (response.status === 401) {
-    if (!window.location.pathname.endsWith("/login.html") && !window.location.pathname.endsWith("login.html")) {
-      window.location.href = "login.html";
-    }
-    throw new Error("Authentication required.");
-  }
-
   const contentType = response.headers.get("content-type") || "";
   const payload = contentType.includes("application/json") ? await response.json() : await response.text();
+
   if (!response.ok) {
-    throw new Error(payload.detail || payload || "Request failed.");
+    const message = payload?.detail || payload || "Request failed.";
+    const isAuthRoute = typeof url === "string" && url.startsWith("/api/auth/");
+    if (response.status === 401 && !isAuthRoute) {
+      if (!window.location.pathname.endsWith("/login.html") && !window.location.pathname.endsWith("login.html")) {
+        window.location.href = "login.html";
+      }
+      throw new Error("Authentication required.");
+    }
+    throw new Error(message);
   }
+
   return payload;
 }
 
@@ -499,61 +502,138 @@ function wireGrantExport() {
 }
 
 function wireLoginPage() {
-  const loginForm = document.getElementById("login-form");
-  const signupForm = document.getElementById("signup-form");
-  const toggleSignupButton = document.getElementById("toggle-signup-button");
-  const toggleLoginButton = document.getElementById("toggle-login-button");
+  const emailStep = document.getElementById("email-step");
+  const passwordStep = document.getElementById("password-step");
+  const emailForm = document.getElementById("email-step-form");
+  const passwordForm = document.getElementById("password-step-form");
+  const emailInput = document.getElementById("staff-email");
+  const selectedEmail = document.getElementById("selected-email");
+  const backButton = document.getElementById("back-to-email-button");
+  const submitButton = document.getElementById("password-submit-button");
+  const passwordInput = document.getElementById("auth-password");
+  const confirmPasswordInput = document.getElementById("auth-confirm-password");
 
-  toggleSignupButton?.addEventListener("click", () => {
-    loginForm.hidden = true;
-    signupForm.hidden = false;
+  const params = new URLSearchParams(window.location.search);
+
+  function showStep(step, email = "") {
+    const normalizedEmail = email.trim().toLowerCase();
+    const isPasswordStep = step === "password";
+    if (emailStep) emailStep.hidden = isPasswordStep;
+    if (passwordStep) passwordStep.hidden = !isPasswordStep;
+    if (emailInput && normalizedEmail) emailInput.value = normalizedEmail;
+    if (selectedEmail) selectedEmail.textContent = normalizedEmail;
+    if (submitButton) submitButton.textContent = "Enter Portal";
+
+    if (!isPasswordStep) {
+      if (passwordInput) passwordInput.value = "";
+      if (confirmPasswordInput) confirmPasswordInput.value = "";
+    }
+
+    const nextParams = new URLSearchParams();
+    if (isPasswordStep && normalizedEmail) {
+      nextParams.set("step", "password");
+      nextParams.set("email", normalizedEmail);
+    }
+    const nextQuery = nextParams.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+    window.history.replaceState({}, "", nextUrl);
     setMessage("auth-message", "");
-  });
+  }
 
-  toggleLoginButton?.addEventListener("click", () => {
-    signupForm.hidden = true;
-    loginForm.hidden = false;
-    setMessage("auth-message", "");
-  });
+  const initialStep = params.get("step") === "password" && params.get("email") ? "password" : "email";
+  const initialEmail = params.get("email") || "";
+  showStep(initialStep, initialEmail);
 
-  loginForm?.addEventListener("submit", async (event) => {
+  emailForm?.addEventListener("submit", (event) => {
     event.preventDefault();
+    const email = (emailInput?.value || "").trim().toLowerCase();
+    if (!email) {
+      setMessage("auth-message", "Enter your staff email to continue.", true);
+      return;
+    }
+    showStep("password", email);
+    passwordInput?.focus();
+  });
+
+  backButton?.addEventListener("click", () => {
+    const email = selectedEmail?.textContent || emailInput?.value || "";
+    showStep("email", email);
+    emailInput?.focus();
+  });
+
+  document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+    if (button.dataset.bound) return;
+    button.dataset.bound = "true";
+    button.addEventListener("click", () => {
+      const inputId = button.dataset.passwordToggle;
+      const input = inputId ? document.getElementById(inputId) : null;
+      if (!input) return;
+      const shouldShow = input.type === "password";
+      input.type = shouldShow ? "text" : "password";
+      button.textContent = shouldShow ? "Hide" : "Show";
+      button.setAttribute("aria-label", shouldShow ? "Hide password" : "Show password");
+    });
+  });
+
+  passwordForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const email = (selectedEmail?.textContent || emailInput?.value || "").trim().toLowerCase();
+    const password = passwordInput?.value || "";
+    const confirmPassword = confirmPasswordInput?.value || "";
+
+    if (!email) {
+      showStep("email");
+      setMessage("auth-message", "Enter your staff email to continue.", true);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setMessage("auth-message", "Passwords do not match.", true);
+      return;
+    }
+
     try {
-      setMessage("auth-message", "Signing in...");
+      setMessage("auth-message", "Checking your portal access...");
       await apiFetch("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify({
-          email: document.getElementById("login-email").value,
-          password: document.getElementById("login-password").value
-        })
+        body: JSON.stringify({ email, password })
       });
       window.location.href = "admin.html";
-    } catch (error) {
-      const message = error.message === "Only approved HUMANBULB staff accounts can access this portal."
-        ? "Access is limited to approved HUMANBULB staff. Please sign in with Brittany, Charlotte, or Henry's staff account or contact an administrator."
-        : error.message;
-      setMessage("auth-message", message, true);
+      return;
+    } catch (loginError) {
+      const loginMessage = loginError?.message || "Unable to sign in.";
+      if (loginMessage.includes("approved HUMANBULB staff")) {
+        setMessage("auth-message", loginMessage, true);
+        return;
+      }
+      if (loginMessage !== "Invalid email or password.") {
+        setMessage("auth-message", loginMessage, true);
+        return;
+      }
     }
-  });
 
-  signupForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
     try {
-      setMessage("auth-message", "Creating account...");
+      setMessage("auth-message", "Creating your portal access...");
       await apiFetch("/api/auth/signup", {
         method: "POST",
-        body: JSON.stringify({
-          email: document.getElementById("signup-email").value,
-          password: document.getElementById("signup-password").value,
-          full_name: document.getElementById("signup-name").value
-        })
+        body: JSON.stringify({ email, password, full_name: "" })
+      });
+      await apiFetch("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password })
       });
       window.location.href = "admin.html";
-    } catch (error) {
-      const message = error.message === "Only approved HUMANBULB staff accounts can access this portal."
-        ? "Access is limited to approved HUMANBULB staff. Please sign in with Brittany, Charlotte, or Henry's staff account or contact an administrator."
-        : error.message;
-      setMessage("auth-message", message, true);
+    } catch (signupError) {
+      const signupMessage = signupError?.message || "Unable to create account.";
+      if (signupMessage.toLowerCase().includes("already") || signupMessage.toLowerCase().includes("registered")) {
+        setMessage("auth-message", "That password did not match this staff account. Try the password already set for this email.", true);
+        return;
+      }
+      if (signupMessage === "Invalid email or password.") {
+        setMessage("auth-message", "That password did not match this staff account. Try the password already set for this email.", true);
+        return;
+      }
+      setMessage("auth-message", signupMessage, true);
     }
   });
 }

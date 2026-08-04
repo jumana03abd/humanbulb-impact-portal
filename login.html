@@ -9,42 +9,53 @@
 <body data-page="login">
   <main class="main-content" style="min-height:100vh;place-content:center;padding:32px;">
     <section class="card auth-card">
-      <p class="eyebrow">HUMANBULB</p>
-      <h2>Sign in to the Impact Portal</h2>
-      <p class="hero-text">Access HUMANBULB’s program uploads, analytics, and grant-ready reports. Portal access is limited to approved staff accounts.</p>
-      <form class="auth-form" id="login-form">
-        <label>
-          <span>Email</span>
-          <input id="login-email" type="email" required>
-        </label>
-        <label>
-          <span>Password</span>
-          <input id="login-password" type="password" required minlength="8">
-        </label>
-        <div class="hero-actions">
-          <button class="button primary button-reset" type="submit">Sign In</button>
-          <button class="button secondary button-reset" type="button" id="toggle-signup-button">Create Account</button>
-        </div>
-      </form>
-      <form class="auth-form" id="signup-form" hidden>
-        <label>
-          <span>Full Name</span>
-          <input id="signup-name" type="text">
-        </label>
-        <label>
-          <span>Email</span>
-          <input id="signup-email" type="email" required>
-        </label>
-        <label>
-          <span>Password</span>
-          <input id="signup-password" type="password" required minlength="8">
-        </label>
-        <div class="hero-actions">
-          <button class="button primary button-reset" type="submit">Create Account</button>
-          <button class="button secondary button-reset" type="button" id="toggle-login-button">Back to Sign In</button>
-        </div>
-        <p class="helper-text">Use an approved HUMANBULB staff email to create an account.</p>
-      </form>
+      <div class="auth-step" id="email-step">
+        <p class="eyebrow">HUMANBULB</p>
+        <h2>Access the Impact Portal</h2>
+        <p class="hero-text">Enter your HUMANBULB staff email to continue.</p>
+
+        <form class="auth-form" id="email-step-form">
+          <label>
+            <span>Email</span>
+            <input id="staff-email" type="email" required autocomplete="email">
+          </label>
+          <div class="hero-actions">
+            <button class="button primary button-reset" type="submit">Continue</button>
+          </div>
+          <p class="helper-text">Access is limited to approved HUMANBULB staff accounts.</p>
+        </form>
+      </div>
+
+      <div class="auth-step" id="password-step" hidden>
+        <p class="eyebrow">HUMANBULB</p>
+        <h2>Create or enter your portal password</h2>
+        <p class="hero-text">Use your approved staff email and choose a password. If this is your first time, we will create your portal access. If you already have access, we will sign you in.</p>
+
+        <div class="auth-email-pill" id="selected-email"></div>
+
+        <form class="auth-form" id="password-step-form">
+          <label>
+            <span>Password</span>
+            <div class="password-field">
+              <input id="auth-password" type="password" required minlength="8" autocomplete="new-password">
+              <button class="password-toggle button-reset" type="button" data-password-toggle="auth-password" aria-label="Show password">Show</button>
+            </div>
+          </label>
+          <label>
+            <span>Confirm Password</span>
+            <div class="password-field">
+              <input id="auth-confirm-password" type="password" required minlength="8" autocomplete="new-password">
+              <button class="password-toggle button-reset" type="button" data-password-toggle="auth-confirm-password" aria-label="Show password">Show</button>
+            </div>
+          </label>
+          <div class="hero-actions auth-step-actions">
+            <button class="button secondary button-reset" type="button" id="back-to-email-button">Back</button>
+            <button class="button primary button-reset" type="submit" id="password-submit-button">Enter Portal</button>
+          </div>
+          <p class="helper-text">Use the same password each time you return to the portal.</p>
+        </form>
+      </div>
+
       <p class="auth-message" id="auth-message"></p>
     </section>
   </main>
