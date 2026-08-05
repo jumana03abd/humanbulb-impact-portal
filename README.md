@@ -83,6 +83,28 @@ uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 http://127.0.0.1:8000/login.html
 ```
 
+## Locked Upload Schemas
+
+The portal now validates spreadsheet uploads against explicit schema rules before analysis begins.
+
+- `Week 1 Pre-Survey`
+  - Required: participant identifier, clean tech knowledge, interview confidence, resume readiness, career clarity, workplace readiness
+- `Weekly Check-In Surveys`
+  - Required: participant identifier, week/check-in marker, reflection or response text
+- `Week 8 Post-Survey`
+  - Required: participant identifier, clean tech knowledge, interview confidence, resume readiness, career clarity, workplace readiness
+- `Deliverables Tracker`
+  - Required: intern/participant name, project or initiative, completion/status
+- `Resume & LinkedIn Completion Tracker`
+  - Required: intern/participant name, resume status, LinkedIn status
+- `Testimonials`
+  - Required: participant identifier, testimonial or quote text
+- `Photos`
+  - Direct image and PDF uploads are allowed
+  - Optional spreadsheet metadata uploads may also be used, but must include a photo filename, URL, or file reference column
+
+The backend accepts common naming variations for each required field, but every spreadsheet must include one match for each required schema item.
+
 ## Production Deployment
 
 1. Deploy the FastAPI app to your Python host.

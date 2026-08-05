@@ -15,6 +15,7 @@ from .db import execute, execute_returning, fetch_all, fetch_one
 from .openai_service import generate_narrative
 from .pdf_report import generate_grant_pdf
 from .storage import StorageClient
+from .upload_schema import serialize_component_schema, validate_component_dataframe
 
 
 COMPONENT_CONFIG = {
@@ -24,7 +25,7 @@ COMPONENT_CONFIG = {
     "deliverables": {"name": "Deliverables Tracker", "type": "Google Sheet", "extensions": {".csv", ".xlsx"}},
     "resume-linkedin": {"name": "Resume & LinkedIn Completion Tracker", "type": "Google Sheet", "extensions": {".csv", ".xlsx"}},
     "testimonials": {"name": "Testimonials", "type": "Google Form", "extensions": {".csv", ".xlsx"}},
-    "photos": {"name": "Photos", "type": "Drive Folder", "extensions": {".png", ".jpg", ".jpeg", ".webp", ".pdf"}},
+    "photos": {"name": "Photos", "type": "Drive Folder", "extensions": {".png", ".jpg", ".jpeg", ".webp", ".pdf", ".csv", ".xlsx"}},
 }
 
 
@@ -125,6 +126,7 @@ def build_component_state(upload_rows: list[dict[str, Any]]) -> list[dict[str, A
                 "type": config["type"],
                 "uploads": len(rows),
                 "files": [_serialize_upload_file(row) for row in rows],
+                "schema": serialize_component_schema(component_id),
             }
         )
     return state
@@ -204,6 +206,9 @@ async def save_upload(user: AuthenticatedUser, project: dict[str, Any], componen
             dataframe = read_spreadsheet(file.filename or "upload", content)
             row_count = int(dataframe.shape[0])
             parsed_summary = dataframe_summary(dataframe)
+            parsed_summary["schema_validation"] = validate_component_dataframe(component, config["name"], dataframe)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         except Exception as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unable to parse spreadsheet: {exc}") from exc
 
