@@ -17,7 +17,7 @@ const COMPONENT_ACCEPT = {
   deliverables: ".csv,.xlsx",
   "resume-linkedin": ".csv,.xlsx",
   testimonials: ".csv,.xlsx",
-  photos: ".png,.jpg,.jpeg,.webp,.pdf"
+  photos: ".png,.jpg,.jpeg,.webp,.pdf,.csv,.xlsx"
 };
 
 function metricMarkup(metric) {

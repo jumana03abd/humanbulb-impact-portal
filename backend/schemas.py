@@ -67,6 +67,7 @@ class SetupComponentState(BaseModel):
     type: str
     uploads: int
     files: list[UploadFileState]
+    schema: dict[str, Any] | None = None
 
 
 class SetupProgress(BaseModel):
