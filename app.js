@@ -509,19 +509,52 @@ async function renderGrantPage() {
 
 function wireGrantExport() {
   const exportButton = document.getElementById("export-pdf-button");
-  if (!exportButton || exportButton.dataset.bound) return;
-  exportButton.dataset.bound = "true";
-  exportButton.addEventListener("click", async (event) => {
+  if (exportButton && !exportButton.dataset.bound) {
+    exportButton.dataset.bound = "true";
+    exportButton.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const original = exportButton.textContent;
+      exportButton.textContent = "Generating PDF...";
+      try {
+        const payload = await apiFetch("/api/projects/current/grant-summary/pdf", { method: "POST", body: "{}" });
+        window.location.href = payload.download_url;
+        exportButton.textContent = "Export PDF";
+      } catch (error) {
+        exportButton.textContent = original;
+        alert(error.message);
+      }
+    });
+  }
+
+  const copyButton = document.getElementById("copy-narrative-button");
+  if (!copyButton || copyButton.dataset.bound) return;
+  copyButton.dataset.bound = "true";
+  copyButton.addEventListener("click", async (event) => {
     event.preventDefault();
-    const original = exportButton.textContent;
-    exportButton.textContent = "Generating PDF...";
+
+    const grant = appState.grant || {};
+    const executive = (grant.executive_summary || "").trim();
+    const narrative = (grant.narrative || "").trim();
+
+    if (!executive && !narrative) {
+      setMessage("grant-copy-message", "No narrative is available to copy yet.", true);
+      return;
+    }
+
+    const text = [
+      executive ? `Executive Summary\n${executive}` : "",
+      narrative ? `Grant-Ready Narrative\n${narrative}` : ""
+    ].filter(Boolean).join("\n\n");
+
     try {
-      const payload = await apiFetch("/api/projects/current/grant-summary/pdf", { method: "POST", body: "{}" });
-      window.location.href = payload.download_url;
-      exportButton.textContent = "Export PDF";
+      await navigator.clipboard.writeText(text);
+      setMessage("grant-copy-message", "Narrative copied.");
     } catch (error) {
-      exportButton.textContent = original;
-      alert(error.message);
+      setMessage(
+        "grant-copy-message",
+        "Unable to copy narrative. Check clipboard permissions and try again.",
+        true
+      );
     }
   });
 }
