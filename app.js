@@ -7,7 +7,8 @@ const appState = {
   analytics: null,
   grant: null,
   pendingUploadComponentId: null,
-  isPreparingDashboard: false
+  isPreparingDashboard: false,
+  uploadErrors: {}
 };
 
 // File extensions allowed per admin workspace upload category.
@@ -75,6 +76,26 @@ function setMessage(targetId, message, isError = false) {
   el.textContent = message || "";
   el.classList.toggle("error", Boolean(isError));
   el.hidden = !message;
+}
+
+function setComponentUploadError(componentId, message = "") {
+  // Store a category-specific upload error for the setup workspace.
+  if (!componentId) return;
+  if (!message) {
+    delete appState.uploadErrors[componentId];
+    return;
+  }
+  appState.uploadErrors[componentId] = message;
+}
+
+function clearAllUploadErrors() {
+  // Clear all category-specific upload errors after successful state refreshes.
+  appState.uploadErrors = {};
+}
+
+function getUploadError(componentId) {
+  // Read the current upload error for one setup category.
+  return appState.uploadErrors[componentId] || "";
 }
 
 function escapeHtml(value) {
@@ -210,11 +231,14 @@ function renderSimpleSetup() {
   const cohortSize = Number(appState.project?.cohort_size || 0);
   const autoLabel = document.getElementById("setup-auto-label");
 
-  renderList("simple-upload-grid", components, (item) => `
-    <div class="simple-upload-item ${item.uploads > 0 ? "connected" : ""}">
+  renderList("simple-upload-grid", components, (item) => {
+    const uploadError = getUploadError(item.id);
+    return `
+    <div class="simple-upload-item ${item.uploads > 0 ? "connected" : ""} ${uploadError ? "has-error" : ""}">
       <div class="simple-upload-copy">
         <strong>${escapeHtml(item.name)}</strong>
         <span>${escapeHtml(item.type)} · Multiple uploads allowed</span>
+        ${uploadError ? `<p class="upload-error-text">${escapeHtml(uploadError)}</p>` : ""}
         ${item.files.length ? `
           <div class="upload-file-list">
             ${item.files.map((file) => `
@@ -236,7 +260,8 @@ function renderSimpleSetup() {
         </button>
       </div>
     </div>
-  `);
+  `;
+  });
 
   const progressLabel = document.getElementById("setup-progress-label");
   const progressNote = document.getElementById("setup-progress-note");
@@ -358,6 +383,7 @@ function wireSimpleSetup() {
           });
         }
         if (payload) applyProjectState(payload);
+        setComponentUploadError(componentId, "");
         renderSimpleSetup();
         wireSimpleSetup();
         setMessage("setup-upload-message", `${files.length} file${files.length > 1 ? "s were" : " was"} uploaded successfully.`);
@@ -365,7 +391,12 @@ function wireSimpleSetup() {
           await prepareDashboardAndContinue(false);
         }
       } catch (error) {
-        setMessage("setup-upload-message", error.message, true);
+        const uploadErrorMessage = error.message || "Upload failed.";
+        const componentName = appState.setupComponents.find((item) => item.id === componentId)?.name || "Upload";
+        setComponentUploadError(componentId, uploadErrorMessage);
+        renderSimpleSetup();
+        wireSimpleSetup();
+        setMessage("setup-upload-message", `${componentName} needs attention. Review the highlighted category below.`, true);
       } finally {
         fileInput.value = "";
       }
@@ -396,6 +427,7 @@ function wireSimpleSetup() {
       try {
         setMessage("setup-upload-message", "Removing file...");
         await removeUpload(uploadId);
+        clearAllUploadErrors();
         renderSimpleSetup();
         wireSimpleSetup();
         setMessage("setup-upload-message", "File removed.");
