@@ -2,430 +2,432 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
-import pandas as pd
+from backend.analysis import (
+    OUTCOME_DEFINITIONS,
+    find_metric_column,
+    find_participant_key,
+    normalize_name,
+)
 
-from .analysis import OUTCOME_DEFINITIONS, find_metric_column, find_participant_key, normalize_name
+
+@dataclass(frozen=True)
+class UploadField:
+    """Describe one logical field and the spreadsheet aliases that can satisfy it."""
+
+    key: str
+    label: str
+    aliases: tuple[str, ...]
 
 
-SCHEMA_DEFINITIONS: dict[str, dict[str, Any]] = {
-    "pre": {
-        "required_fields": [
-            {
-                "key": "participant_identifier",
-                "label": "Participant identifier",
-                "kind": "participant",
-                "description": "Use Email, Participant ID, Intern ID, Student ID, Full Name, or First Name + Last Name.",
-            },
-            {
-                "key": "clean_tech_knowledge",
-                "label": "Clean tech knowledge",
-                "kind": "metric",
-                "aliases": OUTCOME_DEFINITIONS["Clean tech knowledge"],
-                "description": "A Week 1 self-rating for clean tech knowledge or awareness.",
-            },
-            {
-                "key": "interview_confidence",
-                "label": "Interview confidence",
-                "kind": "metric",
-                "aliases": OUTCOME_DEFINITIONS["Interview confidence"],
-                "description": "A Week 1 self-rating for interview confidence.",
-            },
-            {
-                "key": "resume_readiness",
-                "label": "Resume readiness",
-                "kind": "metric",
-                "aliases": OUTCOME_DEFINITIONS["Resume readiness"],
-                "description": "A Week 1 self-rating for resume readiness.",
-            },
-            {
-                "key": "career_clarity",
-                "label": "Career clarity",
-                "kind": "metric",
-                "aliases": OUTCOME_DEFINITIONS["Career clarity"],
-                "description": "A Week 1 self-rating for career clarity or direction.",
-            },
-            {
-                "key": "workplace_readiness",
-                "label": "Workplace readiness",
-                "kind": "metric",
-                "aliases": [
-                    *OUTCOME_DEFINITIONS["Professional communication"],
-                    "time management",
-                    "digital collaboration",
-                    "professionalism",
-                    "work readiness",
-                ],
-                "description": "A Week 1 self-rating for a workplace readiness skill such as communication, time management, or digital collaboration.",
-            },
-        ],
-        "optional_fields": [
-            {
-                "key": "cohort_year",
-                "label": "Cohort year",
-                "kind": "column",
-                "aliases": ["cohort year", "program year", "year"],
-                "description": "Optional cohort or program year field.",
-            }
-        ],
-        "notes": [
-            "Each row should represent one participant response.",
-            "Likert answers can be numeric or text such as Agree or Very confident.",
-        ],
-    },
-    "weekly": {
-        "required_fields": [
-            {
-                "key": "participant_identifier",
-                "label": "Participant identifier",
-                "kind": "participant",
-                "description": "Use Email, Participant ID, Intern ID, Student ID, Full Name, or First Name + Last Name.",
-            },
-            {
-                "key": "week_marker",
-                "label": "Week or check-in marker",
-                "kind": "column",
-                "aliases": ["week", "week number", "check in", "check-in", "session", "date", "submitted at"],
-                "description": "A field that tells the portal which weekly check-in the row belongs to.",
-            },
-            {
-                "key": "reflection_text",
-                "label": "Reflection or response text",
-                "kind": "column",
-                "aliases": ["reflection", "response", "feedback", "comment", "highlight", "what did you learn", "story"],
-                "description": "An open-response field the AI can summarize into participant themes.",
-            },
-        ],
-        "optional_fields": [
-            {
-                "key": "satisfaction",
-                "label": "Satisfaction or experience rating",
-                "kind": "column",
-                "aliases": ["satisfaction", "experience", "weekly satisfaction", "how satisfied", "confidence"],
-                "description": "Optional numeric or text rating for the weekly experience.",
-            }
-        ],
-        "notes": [
-            "Multiple weekly files are allowed.",
-            "Each row should represent one participant response for one week.",
-        ],
-    },
-    "post": {
-        "required_fields": [
-            {
-                "key": "participant_identifier",
-                "label": "Participant identifier",
-                "kind": "participant",
-                "description": "Use the same identifier approach as the pre-survey so participants can be matched.",
-            },
-            {
-                "key": "clean_tech_knowledge",
-                "label": "Clean tech knowledge",
-                "kind": "metric",
-                "aliases": OUTCOME_DEFINITIONS["Clean tech knowledge"],
-                "description": "A Week 8 self-rating for clean tech knowledge or awareness.",
-            },
-            {
-                "key": "interview_confidence",
-                "label": "Interview confidence",
-                "kind": "metric",
-                "aliases": OUTCOME_DEFINITIONS["Interview confidence"],
-                "description": "A Week 8 self-rating for interview confidence.",
-            },
-            {
-                "key": "resume_readiness",
-                "label": "Resume readiness",
-                "kind": "metric",
-                "aliases": OUTCOME_DEFINITIONS["Resume readiness"],
-                "description": "A Week 8 self-rating for resume readiness.",
-            },
-            {
-                "key": "career_clarity",
-                "label": "Career clarity",
-                "kind": "metric",
-                "aliases": OUTCOME_DEFINITIONS["Career clarity"],
-                "description": "A Week 8 self-rating for career clarity or direction.",
-            },
-            {
-                "key": "workplace_readiness",
-                "label": "Workplace readiness",
-                "kind": "metric",
-                "aliases": [
-                    *OUTCOME_DEFINITIONS["Professional communication"],
-                    "time management",
-                    "digital collaboration",
-                    "professionalism",
-                    "work readiness",
-                ],
-                "description": "A Week 8 self-rating for a workplace readiness skill such as communication, time management, or digital collaboration.",
-            },
-        ],
-        "optional_fields": [
-            {
-                "key": "open_reflection",
-                "label": "Open-ended reflection",
-                "kind": "column",
-                "aliases": ["reflection", "response", "testimonial", "quote", "story"],
-                "description": "Optional open-response field for quotes and narrative generation.",
-            }
-        ],
-        "notes": [
-            "The post-survey should mirror the pre-survey outcome areas so matched comparisons can be calculated.",
-        ],
-    },
-    "deliverables": {
-        "required_fields": [
-            {
-                "key": "participant_identifier",
-                "label": "Intern or participant name",
-                "kind": "participant",
-                "description": "Use Intern Name, Participant Name, Full Name, or another participant identifier.",
-            },
-            {
-                "key": "project_or_initiative",
-                "label": "Project or initiative",
-                "kind": "column",
-                "aliases": ["project", "project/initiative", "initiative", "workshop", "activity", "deliverable title"],
-                "description": "The project, initiative, or activity tied to the deliverable row.",
-            },
-            {
-                "key": "completion_status",
-                "label": "Deliverable completion or status",
-                "kind": "column",
-                "aliases": ["status", "completed", "deliverable completed", "completion", "submitted"],
-                "description": "A field that shows whether the deliverable was completed or submitted.",
-            },
-        ],
-        "optional_fields": [
-            {
-                "key": "deliverable_link",
-                "label": "Link to deliverable",
-                "kind": "column",
-                "aliases": ["link", "url", "deliverable link", "artifact link"],
-                "description": "Optional URL to the deliverable or artifact.",
-            },
-            {
-                "key": "impact_evidence",
-                "label": "Impact or evidence note",
-                "kind": "column",
-                "aliases": ["impact", "evidence", "outcome", "notes"],
-                "description": "Optional note about what the deliverable achieved.",
-            },
-        ],
-        "notes": [
-            "Each row should represent one deliverable, project milestone, or completion event.",
-        ],
-    },
-    "resume-linkedin": {
-        "required_fields": [
-            {
-                "key": "participant_identifier",
-                "label": "Intern or participant name",
-                "kind": "participant",
-                "description": "Use Intern Name, Participant Name, Full Name, or another participant identifier.",
-            },
-            {
-                "key": "resume_status",
-                "label": "Resume status",
-                "kind": "column",
-                "aliases": ["resume status", "resume completed", "resume complete", "resume"],
-                "description": "A field showing whether the participant completed a resume.",
-            },
-            {
-                "key": "linkedin_status",
-                "label": "LinkedIn status",
-                "kind": "column",
-                "aliases": ["linkedin status", "linkedin completed", "linkedin complete", "linkedin profile"],
-                "description": "A field showing whether the participant completed a LinkedIn profile.",
-            },
-        ],
-        "optional_fields": [
-            {
-                "key": "resume_link",
-                "label": "Resume link or file",
-                "kind": "column",
-                "aliases": ["resume link", "resume file", "resume url"],
-                "description": "Optional file or URL reference for the participant resume.",
-            },
-            {
-                "key": "linkedin_url",
-                "label": "LinkedIn URL",
-                "kind": "column",
-                "aliases": ["linkedin url", "linkedin link", "profile url"],
-                "description": "Optional LinkedIn profile URL.",
-            },
-            {
-                "key": "staff_verification",
-                "label": "Staff verification",
-                "kind": "column",
-                "aliases": ["verified", "staff verified", "verification status"],
-                "description": "Optional field for staff verification of completion.",
-            },
-        ],
-        "notes": [
-            "Resume and LinkedIn completion should be tracked in separate columns so the portal can calculate both-complete rates.",
-        ],
-    },
-    "testimonials": {
-        "required_fields": [
-            {
-                "key": "participant_identifier",
-                "label": "Participant identifier",
-                "kind": "participant",
-                "description": "Use Email, Participant Name, Full Name, or another identifier tied to the participant response.",
-            },
-            {
-                "key": "testimonial_text",
-                "label": "Testimonial or quote text",
-                "kind": "column",
-                "aliases": ["testimonial", "quote", "response", "reflection", "story", "feedback"],
-                "description": "An open-response field that contains participant testimonial text.",
-            },
-        ],
-        "optional_fields": [
-            {
-                "key": "consent_status",
-                "label": "Consent or permission status",
-                "kind": "column",
-                "aliases": ["consent", "permission", "media release"],
-                "description": "Optional field showing whether the quote can be shared externally.",
-            }
-        ],
-        "notes": [
-            "Each row should contain one participant response or one representative quote.",
-        ],
-    },
-    "photos": {
-        "required_fields": [
-            {
-                "key": "photo_reference",
-                "label": "Photo filename, URL, or file reference",
-                "kind": "column",
-                "aliases": ["photo", "photo file", "filename", "image", "image link", "photo url", "file path"],
-                "description": "Required only when a spreadsheet is uploaded to describe photo metadata.",
-            }
-        ],
-        "optional_fields": [
-            {
-                "key": "caption",
-                "label": "Caption or description",
-                "kind": "column",
-                "aliases": ["caption", "description", "alt text"],
-                "description": "Optional caption or description for the photo.",
-            },
-            {
-                "key": "event_date",
-                "label": "Event or photo date",
-                "kind": "column",
-                "aliases": ["date", "event date", "photo date", "captured on"],
-                "description": "Optional event or capture date.",
-            },
-            {
-                "key": "consent_status",
-                "label": "Consent or permission status",
-                "kind": "column",
-                "aliases": ["consent", "permission", "media release"],
-                "description": "Optional consent flag for external use.",
-            },
-        ],
-        "notes": [
-            "Photos can be uploaded directly as image or PDF files.",
-            "If you upload a spreadsheet for photo metadata, include at least one photo reference column.",
-        ],
-    },
+@dataclass(frozen=True)
+class UploadSchema:
+    """Describe the required and optional fields for one upload component."""
+
+    component: str
+    required_fields: tuple[str, ...]
+    optional_fields: tuple[str, ...] = ()
+
+
+FIELD_DEFINITIONS: dict[str, UploadField] = {
+    "participant_identifier": UploadField(
+        key="participant_identifier",
+        label="Participant identifier",
+        aliases=(
+            "participant identifier",
+            "participant id",
+            "participant",
+            "student name",
+            "intern name",
+            "name",
+            "full name",
+        ),
+    ),
+    "week": UploadField(
+        key="week",
+        label="Week",
+        aliases=(
+            "week",
+            "check-in week",
+            "week number",
+            "program week",
+        ),
+    ),
+    "reflection_text": UploadField(
+        key="reflection_text",
+        label="Reflection or response text",
+        aliases=(
+            "reflection",
+            "response",
+            "responses",
+            "check-in response",
+            "weekly reflection",
+            "how are you feeling",
+            "what did you learn",
+            "what support do you need",
+            "share your thoughts",
+        ),
+    ),
+    "clean_tech_knowledge": UploadField(
+        key="clean_tech_knowledge",
+        label="Clean tech knowledge",
+        aliases=(
+            "clean tech knowledge",
+            "clean-tech knowledge",
+            "knowledge of clean tech",
+            "how familiar are you with clean tech careers",
+            "clean tech careers",
+            "awareness of clean tech career pathways",
+        ),
+    ),
+    "interview_confidence": UploadField(
+        key="interview_confidence",
+        label="Interview confidence",
+        aliases=(
+            "interview confidence",
+            "job interview confidence",
+            "how confident are you participating in a job interview",
+            "how confident are you in a job interview",
+            "how confident are you interviewing",
+            "participating in a job interview",
+        ),
+    ),
+    "resume_readiness": UploadField(
+        key="resume_readiness",
+        label="Resume readiness",
+        aliases=(
+            "resume readiness",
+            "resume confidence",
+            "resume completion",
+            "resume status",
+            "has resume",
+        ),
+    ),
+    "career_clarity": UploadField(
+        key="career_clarity",
+        label="Career clarity",
+        aliases=(
+            "career clarity",
+            "career direction",
+            "confidence in career direction",
+            "clarity in career direction",
+            "career path clarity",
+        ),
+    ),
+    "workplace_readiness": UploadField(
+        key="workplace_readiness",
+        label="Workplace readiness",
+        aliases=(
+            "workplace readiness",
+            "professional communication",
+            "communication skills",
+            "public speaking skills",
+            "project management skills",
+            "teamwork skills",
+            "research skills",
+            "professional workplace expectations",
+            "taking initiative",
+            "leading a project",
+        ),
+    ),
+    "linkedin_completion": UploadField(
+        key="linkedin_completion",
+        label="LinkedIn completion",
+        aliases=(
+            "linkedin completion",
+            "linkedin status",
+            "linkedin",
+            "linkedin profile",
+            "linkedin profile complete",
+        ),
+    ),
+    "program_completion": UploadField(
+        key="program_completion",
+        label="Program completion",
+        aliases=(
+            "program completion",
+            "completion status",
+            "completed program",
+            "completed 8-week program",
+            "program status",
+        ),
+    ),
+    "testimonial_text": UploadField(
+        key="testimonial_text",
+        label="Testimonial or quote text",
+        aliases=(
+            "testimonial",
+            "quote",
+            "participant quote",
+            "response text",
+            "story",
+            "what did this program mean to you",
+            "what was the most valuable part of this experience",
+            "what was the most valuable part of the program",
+            "share a reflection",
+            "share your reflection",
+            "what would you tell someone considering this program",
+            "what would you tell someone considering the program",
+            "what did you gain from this program",
+            "what did you gain from the program",
+            "what stood out most from this experience",
+            "what stood out most from the program",
+            "what is one way the green careers launchpad internship changed how you see your future and what has been your biggest accomplishment throughout this internship",
+        ),
+    ),
+    "project_name": UploadField(
+        key="project_name",
+        label="Project or initiative",
+        aliases=(
+            "project",
+            "project name",
+            "project/initiative",
+            "project / initiative",
+            "initiative",
+            "project or initiative",
+            "initiative or project",
+        ),
+    ),
+    "deliverable_name": UploadField(
+        key="deliverable_name",
+        label="Deliverable completed",
+        aliases=(
+            "deliverable completed",
+            "deliverable",
+            "deliverables",
+            "completed deliverable",
+            "deliverable name",
+        ),
+    ),
+    "completion_status": UploadField(
+        key="completion_status",
+        label="Completion or status",
+        aliases=(
+            "status",
+            "completion",
+            "completion status",
+            "deliverable completed",
+            "completed",
+            "progress",
+        ),
+    ),
+    "category": UploadField(
+        key="category",
+        label="Category",
+        aliases=(
+            "category",
+            "deliverable category",
+            "skill category",
+        ),
+    ),
+    "deliverable_link": UploadField(
+        key="deliverable_link",
+        label="Link to deliverable",
+        aliases=(
+            "link to deliverable",
+            "deliverable link",
+            "deliverable url",
+            "artifact link",
+            "link",
+            "url",
+        ),
+    ),
+    "impact_evidence": UploadField(
+        key="impact_evidence",
+        label="Impact or evidence",
+        aliases=(
+            "impact/evidence",
+            "impact evidence",
+            "evidence",
+            "impact",
+            "notes",
+            "summary of impact",
+        ),
+    ),
+    "photo_reference": UploadField(
+        key="photo_reference",
+        label="Photo filename, URL, or reference",
+        aliases=(
+            "photo",
+            "photo url",
+            "photo link",
+            "image",
+            "image url",
+            "filename",
+            "file name",
+            "photo filename",
+        ),
+    ),
 }
 
 
-def _match_alias_column(df: pd.DataFrame, aliases: list[str]) -> str | None:
-    """Find the closest column match for a list of acceptable aliases."""
-    best: tuple[int, str] | None = None
-    for column in df.columns:
-        normalized_column = normalize_name(str(column))
-        for alias in aliases:
-            normalized_alias = normalize_name(alias)
-            score = 0
-            if not normalized_alias:
-                continue
-            if normalized_column == normalized_alias:
-                score = 100 + len(normalized_alias)
-            elif normalized_alias in normalized_column or normalized_column in normalized_alias:
-                score = 10 + min(len(normalized_alias), len(normalized_column))
-            if score and (best is None or score > best[0]):
-                best = (score, str(column))
-    return best[1] if best else None
+SCHEMA_DEFINITIONS: dict[str, UploadSchema] = {
+    "pre": UploadSchema(
+        component="pre",
+        required_fields=(
+            "participant_identifier",
+            "clean_tech_knowledge",
+            "interview_confidence",
+            "workplace_readiness",
+        ),
+        optional_fields=(
+            "resume_readiness",
+            "career_clarity",
+            "linkedin_completion",
+            "program_completion",
+            "testimonial_text",
+        ),
+    ),
+    "weekly": UploadSchema(
+        component="weekly",
+        required_fields=(
+            "participant_identifier",
+            "week",
+            "reflection_text",
+        ),
+    ),
+    "post": UploadSchema(
+        component="post",
+        required_fields=(
+            "participant_identifier",
+            "clean_tech_knowledge",
+            "interview_confidence",
+            "workplace_readiness",
+        ),
+        optional_fields=(
+            "resume_readiness",
+            "career_clarity",
+            "linkedin_completion",
+            "program_completion",
+            "testimonial_text",
+        ),
+    ),
+    "deliverables": UploadSchema(
+        component="deliverables",
+        required_fields=(
+            "participant_identifier",
+            "project_name",
+            "completion_status",
+        ),
+        optional_fields=(
+            "week",
+            "deliverable_name",
+            "category",
+            "deliverable_link",
+            "impact_evidence",
+        ),
+    ),
+    "resume-linkedin": UploadSchema(
+        component="resume-linkedin",
+        required_fields=(
+            "participant_identifier",
+            "resume_readiness",
+            "linkedin_completion",
+        ),
+        optional_fields=("completion_status",),
+    ),
+    "testimonials": UploadSchema(
+        component="testimonials",
+        required_fields=(
+            "participant_identifier",
+            "testimonial_text",
+        ),
+    ),
+    "photos": UploadSchema(
+        component="photos",
+        required_fields=("photo_reference",),
+    ),
+}
 
 
-def _resolve_required_field(df: pd.DataFrame, field: dict[str, Any]) -> str | None:
-    """Resolve one required schema field against the uploaded dataframe."""
-    kind = field["kind"]
-    if kind == "participant":
-        match = find_participant_key(df)
-        if match == "__full_name__":
-            return "First Name + Last Name"
-        return match
-    if kind == "metric":
-        return find_metric_column(df, field["aliases"])
-    if kind == "column":
-        return _match_alias_column(df, field["aliases"])
+def _normalize_columns(columns: list[str]) -> dict[str, str]:
+    """Map normalized column names back to their original spreadsheet headers."""
+    return {normalize_name(str(column)): str(column) for column in columns if column is not None}
+
+
+def _match_alias_column(dataframe: Any, aliases: tuple[str, ...]) -> str | None:
+    """Return the first spreadsheet column whose normalized name matches any alias."""
+    normalized_columns = _normalize_columns(list(dataframe.columns))
+    for alias in aliases:
+        normalized_alias = normalize_name(alias)
+        if normalized_alias in normalized_columns:
+            return normalized_columns[normalized_alias]
     return None
 
 
+def _resolve_required_field(dataframe: Any, field_key: str) -> str | None:
+    """Resolve one logical schema field to an actual spreadsheet column when possible."""
+    if field_key == "participant_identifier":
+        participant_column = find_participant_key(dataframe)
+        if participant_column:
+            return participant_column
+
+    outcome_definition = OUTCOME_DEFINITIONS.get(field_key)
+    if outcome_definition:
+        metric_column = find_metric_column(dataframe, outcome_definition)
+        if metric_column:
+            return metric_column
+
+    field = FIELD_DEFINITIONS[field_key]
+    return _match_alias_column(dataframe, field.aliases)
+
+
 def serialize_component_schema(component: str) -> dict[str, Any]:
-    """Return the frontend-friendly schema description for one upload component."""
+    """Return a frontend-friendly version of one component schema."""
     schema = SCHEMA_DEFINITIONS[component]
     return {
+        "component": schema.component,
         "required_fields": [
             {
-                "key": field["key"],
-                "label": field["label"],
-                "description": field["description"],
-                "examples": field.get("aliases", []),
+                "key": field_key,
+                "label": FIELD_DEFINITIONS[field_key].label,
             }
-            for field in schema["required_fields"]
+            for field_key in schema.required_fields
         ],
         "optional_fields": [
             {
-                "key": field["key"],
-                "label": field["label"],
-                "description": field["description"],
-                "examples": field.get("aliases", []),
+                "key": field_key,
+                "label": FIELD_DEFINITIONS[field_key].label,
             }
-            for field in schema.get("optional_fields", [])
+            for field_key in schema.optional_fields
         ],
-        "notes": schema.get("notes", []),
     }
 
 
-def validate_component_dataframe(component: str, component_name: str, df: pd.DataFrame) -> dict[str, Any]:
-    """Validate one uploaded spreadsheet against its required schema fields."""
-    if df.empty:
-        raise ValueError(f"{component_name} must include at least one row of data.")
-
+def validate_component_dataframe(component: str, component_name: str, dataframe: Any) -> dict[str, Any]:
+    """Check whether an uploaded spreadsheet contains the required schema fields."""
     schema = SCHEMA_DEFINITIONS[component]
-    matched_fields: dict[str, str] = {}
-    missing_fields: list[str] = []
 
-    for field in schema["required_fields"]:
-        matched = _resolve_required_field(df, field)
-        if matched:
-            matched_fields[field["label"]] = matched
+    matched_required_fields: dict[str, str] = {}
+    missing_required_fields: list[str] = []
+
+    for field_key in schema.required_fields:
+        matched_column = _resolve_required_field(dataframe, field_key)
+        if matched_column:
+            matched_required_fields[field_key] = matched_column
         else:
-            missing_fields.append(field["label"])
+            missing_required_fields.append(FIELD_DEFINITIONS[field_key].label)
 
-    optional_matches = {}
-    for field in schema.get("optional_fields", []):
-        matched = _resolve_required_field(df, field)
-        if matched:
-            optional_matches[field["label"]] = matched
+    matched_optional_fields: dict[str, str] = {}
+    for field_key in schema.optional_fields:
+        matched_column = _resolve_required_field(dataframe, field_key)
+        if matched_column:
+            matched_optional_fields[field_key] = matched_column
 
-    if missing_fields:
-        raise ValueError(
-            f"{component_name} is missing required fields: {', '.join(missing_fields)}."
-        )
+    is_valid = len(missing_required_fields) == 0
 
     return {
-        "matched_fields": matched_fields,
-        "optional_matches": optional_matches,
-        "missing_fields": [],
+        "valid": is_valid,
+        "required_fields": list(schema.required_fields),
+        "optional_fields": list(schema.optional_fields),
+        "matched_required_fields": matched_required_fields,
+        "matched_optional_fields": matched_optional_fields,
+        "missing_required_fields": missing_required_fields,
+        "message": (
+            f"{component_name} matches the required schema."
+            if is_valid
+            else f"{component_name} is missing required fields: {', '.join(missing_required_fields)}."
+        ),
     }

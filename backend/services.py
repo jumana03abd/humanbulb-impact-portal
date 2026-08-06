@@ -94,7 +94,7 @@ def list_uploads(project_id: str, organization_id: str) -> list[dict[str, Any]]:
 
 def _serialize_upload_file(row: dict[str, Any]) -> dict[str, Any]:
     return {
-        "id": row["id"],
+        "id": str(row["id"]),
         "filename": row["filename"],
         "content_type": row["content_type"],
         "size_bytes": int(row["size_bytes"]),

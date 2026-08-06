@@ -67,6 +67,15 @@ async def protected_page(path: str, request: Request) -> FileResponse:
     return FileResponse(ROOT_DIR / path)
 
 
+def serialize_project_summary(project: dict) -> ProjectSummary:
+    """Normalize database rows so UUID-backed ids always serialize as strings."""
+    serialized = dict(project)
+    for key in ("id", "organization_id"):
+        if key in serialized and serialized[key] is not None:
+            serialized[key] = str(serialized[key])
+    return ProjectSummary(**serialized)
+
+
 def build_project_state_payload(user: AuthenticatedUser, project: dict) -> dict:
     uploads = list_uploads(project["id"], user.organization_id)
     setup_components = build_component_state(uploads)
@@ -77,12 +86,12 @@ def build_project_state_payload(user: AuthenticatedUser, project: dict) -> dict:
     setup_progress["analysis_status"] = status_value
     return {
         "user": UserSession(
-            user_id=user.user_id,
+            user_id=str(user.user_id),
             email=user.email,
-            organization_id=user.organization_id,
+            organization_id=str(user.organization_id),
             organization_name=user.organization_name,
         ),
-        "project": ProjectSummary(**project),
+        "project": serialize_project_summary(project),
         "setup_components": setup_components,
         "setup_progress": SetupProgress(**setup_progress),
     }
@@ -130,9 +139,9 @@ async def logout(response: Response) -> dict[str, str]:
 @app.get("/api/auth/me", response_model=UserSession)
 async def me(user: AuthenticatedUser = Depends(authenticate_request)) -> UserSession:
     return UserSession(
-        user_id=user.user_id,
+        user_id=str(user.user_id),
         email=user.email,
-        organization_id=user.organization_id,
+        organization_id=str(user.organization_id),
         organization_name=user.organization_name,
     )
 
@@ -189,7 +198,7 @@ async def dashboard(user: AuthenticatedUser = Depends(authenticate_request)) -> 
     project = get_or_create_current_project(user)
     analysis = await ensure_analysis(user, project)
     return DashboardResponse(
-        project=ProjectSummary(**project),
+        project=serialize_project_summary(project),
         metrics=analysis["metrics"],
         grantObjectives=analysis["objectives"],
         sources=analysis["sources"],
@@ -202,7 +211,7 @@ async def analytics(user: AuthenticatedUser = Depends(authenticate_request)) -> 
     project = get_or_create_current_project(user)
     analysis = await ensure_analysis(user, project)
     return AnalyticsResponse(
-        project=ProjectSummary(**project),
+        project=serialize_project_summary(project),
         beforeAfter=analysis["before_after"],
         distribution=analysis["distribution"],
         deltas=analysis["deltas"],
@@ -229,7 +238,7 @@ async def grant_summary(user: AuthenticatedUser = Depends(authenticate_request))
     )
     pdf_download_url = f"/api/reports/{latest_report['id']}/download" if latest_report else None
     return GrantSummaryResponse(
-        project=ProjectSummary(**project),
+        project=serialize_project_summary(project),
         metrics=[{"value": item["value"], "label": item["label"].lower()} for item in analysis["metrics"][:4]],
         objectives=analysis["objectives"],
         quote=analysis["selected_quote"],
