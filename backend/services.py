@@ -28,6 +28,8 @@ COMPONENT_CONFIG = {
     "photos": {"name": "Photos", "type": "Drive Folder", "extensions": {".png", ".jpg", ".jpeg", ".webp", ".pdf", ".csv", ".xlsx"}},
 }
 
+ANALYSIS_VERSION = 2
+
 
 def now_utc() -> datetime:
     """Provide a timezone-aware UTC timestamp for stored portal records."""
@@ -112,6 +114,7 @@ def _serialize_upload_file(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_component_state(upload_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Group raw uploads into the setup cards rendered in the admin workspace."""
     grouped: dict[str, list[dict[str, Any]]] = {}
     for row in upload_rows:
         grouped.setdefault(row["component"], []).append(row)
@@ -133,6 +136,7 @@ def build_component_state(upload_rows: list[dict[str, Any]]) -> list[dict[str, A
 
 
 def build_setup_progress(project: dict[str, Any], upload_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize how close the current project is to a complete upload setup."""
     completed_required = 0
     total_required = len(COMPONENT_CONFIG) + 1
     missing_components: list[str] = []
@@ -206,7 +210,13 @@ async def save_upload(user: AuthenticatedUser, project: dict[str, Any], componen
             dataframe = read_spreadsheet(file.filename or "upload", content)
             row_count = int(dataframe.shape[0])
             parsed_summary = dataframe_summary(dataframe)
-            parsed_summary["schema_validation"] = validate_component_dataframe(component, config["name"], dataframe)
+            schema_validation = validate_component_dataframe(component, config["name"], dataframe)
+            parsed_summary["schema_validation"] = schema_validation
+            if not schema_validation["valid"]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=schema_validation["message"],
+                )
         except ValueError as exc:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
         except Exception as exc:
@@ -302,6 +312,7 @@ async def analyze_project(user: AuthenticatedUser, project: dict[str, Any]) -> d
     analysis = build_analysis(project, datasets)
     narrative = generate_narrative(analysis)
     payload = {
+        "analysis_version": ANALYSIS_VERSION,
         "metrics": analysis["metrics"],
         "objectives": analysis["objectives"],
         "before_after": analysis["before_after"],
@@ -350,7 +361,7 @@ def get_saved_analysis(project_id: str, organization_id: str) -> dict[str, Any] 
 async def ensure_analysis(user: AuthenticatedUser, project: dict[str, Any]) -> dict[str, Any]:
     """Return cached analysis when possible, otherwise generate it on demand."""
     analysis = get_saved_analysis(project["id"], user.organization_id)
-    if analysis:
+    if analysis and analysis.get("analysis_version") == ANALYSIS_VERSION:
         return analysis
     return await analyze_project(user, project)
 

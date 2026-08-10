@@ -40,6 +40,18 @@ function renderList(targetId, items, template) {
   el.innerHTML = items.map(template).join("");
 }
 
+function renderChartEmptyState(targetId, title, message) {
+  // Replace blank chart regions with a clear explanation when comparison data is not ready yet.
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  el.innerHTML = `
+    <div class="chart-empty-state">
+      <strong>${title}</strong>
+      <p>${message}</p>
+    </div>
+  `;
+}
+
 async function apiFetch(url, options = {}) {
   // Handle API requests and normalize auth/error behavior.
   const response = await fetch(url, {
@@ -489,15 +501,25 @@ async function renderAnalyticsPage() {
     colors: ["#FCE68A", "#2F8F5B"],
     labels: ["Week 1", "Week 8"]
   });
-  renderList("delta-list", payload.deltas, (item) => `
-    <div class="delta-row">
-      <div class="delta-copy">
-        <strong>${item.label}</strong>
-        <span>Increase from Week 1 baseline</span>
-      </div>
-      <span class="delta-value">+${item.delta}%</span>
-    </div>
-  `);
+  const deltaList = document.getElementById("delta-list");
+  if (deltaList) {
+    deltaList.innerHTML = payload.deltas.length
+      ? payload.deltas.map((item) => `
+        <div class="delta-row">
+          <div class="delta-copy">
+            <strong>${item.label}</strong>
+            <span>Percent change from Week 1 baseline</span>
+          </div>
+          <span class="delta-value">+${item.delta}%</span>
+        </div>
+      `).join("")
+      : `
+        <div class="chart-empty-state compact">
+          <strong>Awaiting Week 8 post-survey upload</strong>
+          <p>Improvement percentages will appear here after the post-survey is uploaded and matched to Week 1 participant records.</p>
+        </div>
+      `;
+  }
   renderStackedBars("distribution-chart", payload.distribution);
 
   const notes = document.querySelector(".check-list");
@@ -733,6 +755,14 @@ function renderGroupedHorizontalChart(targetId, items, options) {
   // Draw the paired Week 1 vs Week 8 horizontal comparison bars in SVG.
   const el = document.getElementById(targetId);
   if (!el) return;
+  if (!items.length) {
+    renderChartEmptyState(
+      targetId,
+      "Awaiting Week 8 post-survey data",
+      "This score comparison will appear once the Week 8 post-survey is uploaded and matched to the Week 1 participant responses."
+    );
+    return;
+  }
   const width = 720;
   const rowHeight = 66;
   const height = Math.max(items.length, 1) * rowHeight + 40;
@@ -765,6 +795,14 @@ function renderStackedBars(targetId, items) {
   // Draw the response-distribution comparison chart for the analytics page.
   const el = document.getElementById(targetId);
   if (!el) return;
+  if (!items.length) {
+    renderChartEmptyState(
+      targetId,
+      "Awaiting matched confidence responses",
+      "The confidence distribution comparison will populate after Week 8 confidence responses are available for participants already found in Week 1."
+    );
+    return;
+  }
   const width = 680;
   const height = 260;
   const padding = 24;

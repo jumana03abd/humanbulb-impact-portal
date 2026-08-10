@@ -929,6 +929,33 @@ body::after {
   height: 100%;
 }
 
+.chart-empty-state {
+  display: grid;
+  align-content: center;
+  gap: 10px;
+  min-height: 220px;
+  padding: 28px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(245, 250, 247, 0.92));
+  border: 1px dashed rgba(15, 39, 71, 0.16);
+  color: var(--text);
+}
+
+.chart-empty-state.compact {
+  min-height: 120px;
+}
+
+.chart-empty-state strong {
+  font-size: 1.05rem;
+  color: var(--blue);
+}
+
+.chart-empty-state p {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--muted);
+}
+
 .progress-row {
   justify-content: space-between;
   gap: 16px;

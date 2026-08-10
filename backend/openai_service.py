@@ -9,6 +9,7 @@ from .config import get_settings
 
 
 def deterministic_narrative(analysis: dict[str, Any]) -> dict[str, str]:
+    """Build a safe local narrative when the OpenAI call is unavailable or fails."""
     summary = analysis["summary"]
     executive = (
         f"HUMANBULB's Green Careers Launchpad served {summary['interns_served']} interns and "
@@ -29,6 +30,7 @@ def deterministic_narrative(analysis: dict[str, Any]) -> dict[str, str]:
 
 
 def generate_narrative(analysis: dict[str, Any]) -> dict[str, str]:
+    """Generate grant-ready narrative text, falling back to deterministic copy if needed."""
     settings = get_settings()
     if not settings.openai_api_key:
         return deterministic_narrative(analysis)
@@ -42,28 +44,30 @@ def generate_narrative(analysis: dict[str, Any]) -> dict[str, str]:
             "Use only the supplied metrics, objectives, and quotes.",
             "Do not invent statistics, program activities, or outcomes.",
             "Return concise funder-ready prose.",
+            "Return strict JSON with keys executive_summary, grant_narrative, participant_quote.",
         ],
     }
-    response = client.responses.create(
-        model=settings.openai_model,
-        input=[
-            {
-                "role": "system",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "You write nonprofit grant reporting summaries grounded only in provided evidence. Return strict JSON with keys executive_summary, grant_narrative, participant_quote.",
-                    }
-                ],
-            },
-            {
-                "role": "user",
-                "content": [{"type": "text", "text": json.dumps(prompt)}],
-            },
-        ],
-    )
-    text = response.output_text
+
     try:
+        response = client.responses.create(
+            model=settings.openai_model,
+            input=[
+                {
+                    "role": "system",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": "You write nonprofit grant reporting summaries grounded only in provided evidence.",
+                        }
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [{"type": "input_text", "text": json.dumps(prompt)}],
+                },
+            ],
+        )
+        text = response.output_text
         payload = json.loads(text)
         return {
             "executive_summary": payload["executive_summary"],
