@@ -19,6 +19,7 @@ from .config import get_settings
 from .schemas import (
     AnalyticsResponse,
     CohortSizeRequest,
+    ReportingPeriodRequest,
     DashboardResponse,
     GrantSummaryResponse,
     LoginRequest,
@@ -42,6 +43,7 @@ from .services import (
     save_upload,
     set_project_status,
     update_cohort_size,
+    update_reporting_period,
 )
 from .storage import StorageClient
 
@@ -50,6 +52,19 @@ settings = get_settings()
 ROOT_DIR = Path(__file__).resolve().parents[1]
 
 app = FastAPI(title="HUMANBULB Impact Portal API")
+
+
+@app.on_event("startup")
+async def ensure_reporting_period_column() -> None:
+    """Create the reporting-period column when the local app boots."""
+    from .db import execute
+
+    execute(
+        """
+        alter table projects
+        add column if not exists reporting_period text not null default ''
+        """
+    )
 
 
 @app.get("/health")
@@ -170,6 +185,16 @@ async def save_cohort_size(payload: CohortSizeRequest, user: AuthenticatedUser =
     return build_project_state_payload(user, project)
 
 
+@app.post("/api/projects/current/reporting-period")
+async def save_reporting_period(payload: ReportingPeriodRequest, user: AuthenticatedUser = Depends(authenticate_request)) -> dict[str, object]:
+    """Persist the reporting period entered on the setup workspace page."""
+    project = get_or_create_current_project(user)
+    reporting_period = payload.reporting_period.strip()
+    update_reporting_period(project["id"], user.organization_id, reporting_period)
+    project["reporting_period"] = reporting_period
+    return build_project_state_payload(user, project)
+
+
 @app.post("/api/projects/current/uploads")
 async def upload_project_file(
     component: str = Form(...),
@@ -216,6 +241,7 @@ async def dashboard(user: AuthenticatedUser = Depends(authenticate_request)) -> 
         metrics=analysis["metrics"],
         grantObjectives=analysis["objectives"],
         sources=analysis["sources"],
+        featuredPhotos=analysis.get("featured_photos", []),
         last_calculated_at=analysis.get("calculated_at"),
     )
 
@@ -258,12 +284,43 @@ async def grant_summary(user: AuthenticatedUser = Depends(authenticate_request))
         metrics=[{"value": item["value"], "label": item["label"].lower()} for item in analysis["metrics"][:4]],
         objectives=analysis["objectives"],
         quote=analysis["selected_quote"],
+        quotes=analysis.get("quotes", [])[:3],
         narrative=analysis["grant_narrative"],
         executive_summary=analysis["executive_summary"],
+        featuredPhotos=analysis.get("featured_photos", []),
         report_id=latest_report["id"] if latest_report else None,
         pdf_download_url=pdf_download_url,
         generated_at=latest_report["created_at"] if latest_report else analysis.get("calculated_at"),
     )
+
+
+@app.get("/api/projects/current/uploads/{upload_id}/asset/{asset_index}")
+async def project_upload_asset(upload_id: str, asset_index: int, user: AuthenticatedUser = Depends(authenticate_request)) -> StreamingResponse:
+    """Stream one protected featured-photo asset from the active project uploads."""
+    from .db import fetch_one
+
+    project = get_or_create_current_project(user)
+    row = fetch_one(
+        """
+        select storage_path, content_type, parsed_summary
+        from project_uploads
+        where id = %s and project_id = %s and organization_id = %s
+        limit 1
+        """,
+        (upload_id, project["id"], user.organization_id),
+    )
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload asset not found.")
+
+    summary = row.get("parsed_summary") or {}
+    featured_images = summary.get("featured_images") or []
+    if asset_index < 0 or asset_index >= len(featured_images):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Upload asset not found.")
+
+    asset = featured_images[asset_index]
+    payload = await StorageClient(settings).download_bytes(settings.supabase_bucket_uploads, asset["storage_path"])
+    media_type = asset.get("content_type") or row.get("content_type") or "application/octet-stream"
+    return StreamingResponse(iter([payload]), media_type=media_type)
 
 
 @app.post("/api/projects/current/grant-summary/pdf")

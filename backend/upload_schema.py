@@ -159,6 +159,8 @@ FIELD_DEFINITIONS: dict[str, UploadField] = {
         label="Testimonial or quote text",
         aliases=(
             "testimonial",
+            "testimonial response",
+            "testimonial responses",
             "quote",
             "participant quote",
             "response text",

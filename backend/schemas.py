@@ -27,12 +27,17 @@ class CohortSizeRequest(BaseModel):
     cohort_size: int = Field(ge=0, le=100000)
 
 
+class ReportingPeriodRequest(BaseModel):
+    reporting_period: str = Field(min_length=1, max_length=120)
+
+
 class ProjectSummary(BaseModel):
     id: str
     organization_id: str
     name: str
     cohort_year: int | None = None
     cohort_size: int = 0
+    reporting_period: str = ""
     status: str
     created_at: datetime
     updated_at: datetime
@@ -101,11 +106,18 @@ class ObjectiveCard(BaseModel):
     statusTone: str
 
 
+class PhotoAsset(BaseModel):
+    url: str
+    filename: str
+    caption: str
+
+
 class DashboardResponse(BaseModel):
     project: ProjectSummary
     metrics: list[MetricCard]
     grantObjectives: list[ObjectiveCard]
     sources: list[dict[str, Any]]
+    featuredPhotos: list[PhotoAsset] = Field(default_factory=list)
     last_calculated_at: datetime | None = None
 
 
@@ -135,8 +147,10 @@ class GrantSummaryResponse(BaseModel):
     metrics: list[dict[str, str]]
     objectives: list[ObjectiveCard]
     quote: str
+    quotes: list[str]
     narrative: str
     executive_summary: str
+    featuredPhotos: list[PhotoAsset] = Field(default_factory=list)
     report_id: str | None = None
     pdf_download_url: str | None = None
     generated_at: datetime | None = None

@@ -19,7 +19,7 @@ const COMPONENT_ACCEPT = {
   deliverables: ".csv,.xlsx",
   "resume-linkedin": ".csv,.xlsx",
   testimonials: ".csv,.xlsx",
-  photos: ".png,.jpg,.jpeg,.webp,.pdf,.csv,.xlsx"
+  photos: ".zip,.png,.jpg,.jpeg,.webp"
 };
 
 function metricMarkup(metric) {
@@ -52,6 +52,28 @@ function renderChartEmptyState(targetId, title, message) {
   `;
 }
 
+function renderFeaturedPhotos(targetId, photos, emptyTitle, emptyMessage) {
+  // Render a small featured-photo gallery or a clear empty state when no photos are uploaded yet.
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  if (!Array.isArray(photos) || !photos.length) {
+    el.innerHTML = `
+      <div class="chart-empty-state compact">
+        <strong>${emptyTitle}</strong>
+        <p>${emptyMessage}</p>
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = photos.map((photo) => `
+    <article class="photo-panel photo-panel-image">
+      <img class="photo-panel-media" src="${encodeURI(photo.url)}" alt="${escapeHtml(photo.caption || photo.filename || 'Program photo')}" loading="lazy" />
+      <span class="photo-panel-caption">${escapeHtml(photo.caption || photo.filename || 'Program photo')}</span>
+    </article>
+  `).join("");
+}
+
 async function apiFetch(url, options = {}) {
   // Handle API requests and normalize auth/error behavior.
   const response = await fetch(url, {
@@ -77,7 +99,6 @@ async function apiFetch(url, options = {}) {
     }
     throw new Error(message);
   }
-
   return payload;
 }
 
@@ -210,6 +231,17 @@ async function saveCohortSize(value) {
   return payload;
 }
 
+async function saveReportingPeriod(value) {
+  // Persist the reporting period entered by staff during setup.
+  if (!appState.project) return null;
+  const payload = await apiFetch("/api/projects/current/reporting-period", {
+    method: "POST",
+    body: JSON.stringify({ reporting_period: value })
+  });
+  applyProjectState(payload);
+  return payload;
+}
+
 async function removeUpload(uploadId) {
   // Remove a single uploaded file from the active project.
   const payload = await apiFetch(`/api/projects/current/uploads/${uploadId}`, {
@@ -241,6 +273,7 @@ function renderSimpleSetup() {
     analysis_status: "draft"
   };
   const cohortSize = Number(appState.project?.cohort_size || 0);
+  const reportingPeriod = String(appState.project?.reporting_period || "");
   const autoLabel = document.getElementById("setup-auto-label");
 
   renderList("simple-upload-grid", components, (item) => {
@@ -279,9 +312,11 @@ function renderSimpleSetup() {
   const progressNote = document.getElementById("setup-progress-note");
   const completeCard = document.getElementById("setup-complete-card");
   const cohortInput = document.getElementById("cohort-size-input");
+  const reportingPeriodInput = document.getElementById("reporting-period-input");
   const completeCopy = document.getElementById("setup-complete-copy");
 
   if (cohortInput) cohortInput.value = cohortSize > 0 ? String(cohortSize) : "";
+  if (reportingPeriodInput) reportingPeriodInput.value = reportingPeriod;
   if (progressLabel) progressLabel.textContent = `${progress.completed_required} of ${progress.total_required} connected`;
   if (progressNote) {
     progressNote.textContent = progress.is_complete
@@ -351,6 +386,7 @@ function wireSetupNavigation() {
 function wireSimpleSetup() {
   // Attach all upload, remove, and cohort-size behaviors for the admin setup page.
   const cohortInput = document.getElementById("cohort-size-input");
+  const reportingPeriodInput = document.getElementById("reporting-period-input");
   const fileInput = document.getElementById("workspace-file-input");
   if (cohortInput && !cohortInput.dataset.bound) {
     cohortInput.dataset.bound = "true";
@@ -369,6 +405,26 @@ function wireSimpleSetup() {
           if (appState.setupProgress?.is_complete) {
             await prepareDashboardAndContinue(false);
           }
+        } catch (error) {
+          setMessage("setup-upload-message", error.message, true);
+        }
+      }, 250);
+    });
+  }
+
+
+  if (reportingPeriodInput && !reportingPeriodInput.dataset.bound) {
+    reportingPeriodInput.dataset.bound = "true";
+    let timer = null;
+    reportingPeriodInput.addEventListener("input", () => {
+      const normalized = reportingPeriodInput.value.trimStart().slice(0, 120);
+      if (appState.project) appState.project.reporting_period = normalized;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(async () => {
+        try {
+          await saveReportingPeriod(normalized.trim());
+          renderSimpleSetup();
+          wireSimpleSetup();
         } catch (error) {
           setMessage("setup-upload-message", error.message, true);
         }
@@ -487,6 +543,12 @@ async function renderDashboardPage() {
       </div>
     </article>
   `);
+  renderFeaturedPhotos(
+    "dashboard-featured-photos",
+    payload.featuredPhotos,
+    "Awaiting photo upload",
+    "Upload individual images or a ZIP of the program photo folder to feature visuals here automatically."
+  );
 }
 
 async function renderAnalyticsPage() {
@@ -553,10 +615,32 @@ async function renderGrantPage() {
     </div>
   `);
   const executiveSummary = document.getElementById("grant-executive-summary");
-  const quote = document.getElementById("grant-quote");
+  const reportingPeriod = document.getElementById("grant-reporting-period");
+  const quotesContainer = document.getElementById("grant-quotes");
   const narrative = document.getElementById("grant-narrative");
   if (executiveSummary) executiveSummary.textContent = payload.executive_summary;
-  if (quote) quote.textContent = `"${payload.quote}"`;
+  if (reportingPeriod) reportingPeriod.textContent = payload.project?.reporting_period || `${payload.project?.cohort_year || "Current"} cohort`;
+  if (quotesContainer) {
+    const sourceQuotes = Array.isArray(payload.quotes) && payload.quotes.length ? payload.quotes : [payload.quote].filter(Boolean);
+    const trimmedQuotes = sourceQuotes.slice(0, 3).map((quoteText) => {
+      const normalized = String(quoteText || "").replace(/\s+/g, " ").trim();
+      if (normalized.length <= 180) return normalized;
+      const sentenceBreak = normalized.slice(0, 180).lastIndexOf('. ');
+      const cutoff = sentenceBreak > 80 ? sentenceBreak + 1 : 177;
+      return `${normalized.slice(0, cutoff).trim()}...`;
+    });
+    quotesContainer.innerHTML = trimmedQuotes.map((quoteText) => `
+      <div class="grant-quote-card">
+        <blockquote>"${escapeHtml(quoteText)}"</blockquote>
+      </div>
+    `).join("");
+  }
+  renderFeaturedPhotos(
+    "grant-featured-photos",
+    payload.featuredPhotos,
+    "Awaiting photo upload",
+    "Upload individual photos or a ZIP of the program photo folder to include visuals in the grant-ready summary."
+  );
   if (narrative) narrative.textContent = payload.narrative;
   wireGrantExport();
 }
@@ -763,11 +847,11 @@ function renderGroupedHorizontalChart(targetId, items, options) {
     );
     return;
   }
-  const width = 720;
+  const width = 880;
   const rowHeight = 66;
   const height = Math.max(items.length, 1) * rowHeight + 40;
-  const labelSpace = 270;
-  const barWidth = width - labelSpace - 40;
+  const labelSpace = 470;
+  const barWidth = width - labelSpace - 48;
 
   const rows = items.map((item, index) => {
     const y = 24 + index * rowHeight;
