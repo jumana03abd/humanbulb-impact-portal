@@ -106,11 +106,18 @@ class ObjectiveCard(BaseModel):
     statusTone: str
 
 
+class PhotoAsset(BaseModel):
+    url: str
+    filename: str
+    caption: str
+
+
 class DashboardResponse(BaseModel):
     project: ProjectSummary
     metrics: list[MetricCard]
     grantObjectives: list[ObjectiveCard]
     sources: list[dict[str, Any]]
+    featuredPhotos: list[PhotoAsset] = Field(default_factory=list)
     last_calculated_at: datetime | None = None
 
 
@@ -143,6 +150,7 @@ class GrantSummaryResponse(BaseModel):
     quotes: list[str]
     narrative: str
     executive_summary: str
+    featuredPhotos: list[PhotoAsset] = Field(default_factory=list)
     report_id: str | None = None
     pdf_download_url: str | None = None
     generated_at: datetime | None = None

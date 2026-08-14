@@ -19,7 +19,7 @@ const COMPONENT_ACCEPT = {
   deliverables: ".csv,.xlsx",
   "resume-linkedin": ".csv,.xlsx",
   testimonials: ".csv,.xlsx",
-  photos: ".png,.jpg,.jpeg,.webp,.pdf,.csv,.xlsx"
+  photos: ".zip,.png,.jpg,.jpeg,.webp"
 };
 
 function metricMarkup(metric) {
@@ -50,6 +50,28 @@ function renderChartEmptyState(targetId, title, message) {
       <p>${message}</p>
     </div>
   `;
+}
+
+function renderFeaturedPhotos(targetId, photos, emptyTitle, emptyMessage) {
+  // Render a small featured-photo gallery or a clear empty state when no photos are uploaded yet.
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  if (!Array.isArray(photos) || !photos.length) {
+    el.innerHTML = `
+      <div class="chart-empty-state compact">
+        <strong>${emptyTitle}</strong>
+        <p>${emptyMessage}</p>
+      </div>
+    `;
+    return;
+  }
+
+  el.innerHTML = photos.map((photo) => `
+    <article class="photo-panel photo-panel-image">
+      <img class="photo-panel-media" src="${encodeURI(photo.url)}" alt="${escapeHtml(photo.caption || photo.filename || 'Program photo')}" loading="lazy" />
+      <span class="photo-panel-caption">${escapeHtml(photo.caption || photo.filename || 'Program photo')}</span>
+    </article>
+  `).join("");
 }
 
 async function apiFetch(url, options = {}) {
@@ -521,6 +543,12 @@ async function renderDashboardPage() {
       </div>
     </article>
   `);
+  renderFeaturedPhotos(
+    "dashboard-featured-photos",
+    payload.featuredPhotos,
+    "Awaiting photo upload",
+    "Upload individual images or a ZIP of the program photo folder to feature visuals here automatically."
+  );
 }
 
 async function renderAnalyticsPage() {
@@ -607,6 +635,12 @@ async function renderGrantPage() {
       </div>
     `).join("");
   }
+  renderFeaturedPhotos(
+    "grant-featured-photos",
+    payload.featuredPhotos,
+    "Awaiting photo upload",
+    "Upload individual photos or a ZIP of the program photo folder to include visuals in the grant-ready summary."
+  );
   if (narrative) narrative.textContent = payload.narrative;
   wireGrantExport();
 }
