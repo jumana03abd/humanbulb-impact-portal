@@ -44,14 +44,18 @@
       <section class="card cohort-input-card">
         <div class="card-header">
           <div>
-            <p class="eyebrow">Cohort Size</p>
-            <h3>Enter the number of interns in this year's cohort</h3>
-            <p>This gives staff a simple place to record the annual cohort count before uploading the source files.</p>
+            <p class="eyebrow">Project Details</p>
+            <h3>Enter the cohort size and reporting period</h3>
+            <p>This gives staff a simple place to record the annual cohort count and reporting label before uploading the source files.</p>
           </div>
         </div>
         <div class="cohort-input-row">
           <label class="cohort-input-label" for="cohort-size-input">Number of interns</label>
           <input class="cohort-input" id="cohort-size-input" type="number" min="0" step="1" inputmode="numeric" placeholder="Enter cohort size">
+        </div>
+        <div class="cohort-input-row">
+          <label class="cohort-input-label" for="reporting-period-input">Reporting period</label>
+          <input class="cohort-input" id="reporting-period-input" type="text" maxlength="120" placeholder="Example: Summer 2026 cohort">
         </div>
       </section>
 

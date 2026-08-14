@@ -28,7 +28,7 @@ COMPONENT_CONFIG = {
     "photos": {"name": "Photos", "type": "Drive Folder", "extensions": {".png", ".jpg", ".jpeg", ".webp", ".pdf", ".csv", ".xlsx"}},
 }
 
-ANALYSIS_VERSION = 2
+ANALYSIS_VERSION = 3
 
 
 def now_utc() -> datetime:
@@ -40,7 +40,7 @@ def get_or_create_current_project(user: AuthenticatedUser) -> dict[str, Any]:
     """Return the latest project for an organization or create a fresh cohort shell."""
     project = fetch_one(
         """
-        select id, organization_id, name, cohort_year, cohort_size, status, created_at, updated_at
+        select id, organization_id, name, cohort_year, cohort_size, reporting_period, status, created_at, updated_at
         from projects
         where organization_id = %s
         order by updated_at desc
@@ -53,11 +53,11 @@ def get_or_create_current_project(user: AuthenticatedUser) -> dict[str, Any]:
 
     return execute_returning(
         """
-        insert into projects (id, organization_id, owner_user_id, name, cohort_year, cohort_size, status)
-        values (%s, %s, %s, %s, %s, %s, %s)
-        returning id, organization_id, name, cohort_year, cohort_size, status, created_at, updated_at
+        insert into projects (id, organization_id, owner_user_id, name, cohort_year, cohort_size, reporting_period, status)
+        values (%s, %s, %s, %s, %s, %s, %s, %s)
+        returning id, organization_id, name, cohort_year, cohort_size, reporting_period, status, created_at, updated_at
         """,
-        (str(uuid4()), user.organization_id, user.user_id, "Green Careers Launchpad", now_utc().year, 0, "draft"),
+        (str(uuid4()), user.organization_id, user.user_id, "Green Careers Launchpad", now_utc().year, 0, "", "draft"),
     )
 
 
@@ -84,6 +84,18 @@ def update_cohort_size(project_id: str, organization_id: str, cohort_size: int) 
         (cohort_size, project_id, organization_id),
     )
     invalidate_saved_analysis(project_id, organization_id)
+
+
+def update_reporting_period(project_id: str, organization_id: str, reporting_period: str) -> None:
+    """Save the staff-entered reporting period used in summaries and exports."""
+    execute(
+        """
+        update projects
+        set reporting_period = %s, updated_at = now()
+        where id = %s and organization_id = %s
+        """,
+        (reporting_period, project_id, organization_id),
+    )
 
 
 def list_uploads(project_id: str, organization_id: str) -> list[dict[str, Any]]:

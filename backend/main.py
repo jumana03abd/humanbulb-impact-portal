@@ -19,6 +19,7 @@ from .config import get_settings
 from .schemas import (
     AnalyticsResponse,
     CohortSizeRequest,
+    ReportingPeriodRequest,
     DashboardResponse,
     GrantSummaryResponse,
     LoginRequest,
@@ -42,6 +43,7 @@ from .services import (
     save_upload,
     set_project_status,
     update_cohort_size,
+    update_reporting_period,
 )
 from .storage import StorageClient
 
@@ -50,6 +52,19 @@ settings = get_settings()
 ROOT_DIR = Path(__file__).resolve().parents[1]
 
 app = FastAPI(title="HUMANBULB Impact Portal API")
+
+
+@app.on_event("startup")
+async def ensure_reporting_period_column() -> None:
+    """Create the reporting-period column when the local app boots."""
+    from .db import execute
+
+    execute(
+        """
+        alter table projects
+        add column if not exists reporting_period text not null default ''
+        """
+    )
 
 
 @app.get("/health")
@@ -170,6 +185,16 @@ async def save_cohort_size(payload: CohortSizeRequest, user: AuthenticatedUser =
     return build_project_state_payload(user, project)
 
 
+@app.post("/api/projects/current/reporting-period")
+async def save_reporting_period(payload: ReportingPeriodRequest, user: AuthenticatedUser = Depends(authenticate_request)) -> dict[str, object]:
+    """Persist the reporting period entered on the setup workspace page."""
+    project = get_or_create_current_project(user)
+    reporting_period = payload.reporting_period.strip()
+    update_reporting_period(project["id"], user.organization_id, reporting_period)
+    project["reporting_period"] = reporting_period
+    return build_project_state_payload(user, project)
+
+
 @app.post("/api/projects/current/uploads")
 async def upload_project_file(
     component: str = Form(...),
@@ -258,6 +283,7 @@ async def grant_summary(user: AuthenticatedUser = Depends(authenticate_request))
         metrics=[{"value": item["value"], "label": item["label"].lower()} for item in analysis["metrics"][:4]],
         objectives=analysis["objectives"],
         quote=analysis["selected_quote"],
+        quotes=analysis.get("quotes", [])[:3],
         narrative=analysis["grant_narrative"],
         executive_summary=analysis["executive_summary"],
         report_id=latest_report["id"] if latest_report else None,

@@ -73,11 +73,13 @@ def generate_grant_pdf(project: dict[str, Any], analysis: dict[str, Any], narrat
     story.append(HRFlowable(width="100%", thickness=0.8, color=colors.HexColor("#D8E1EA")))
     story.append(Spacer(1, 0.1 * inch))
 
+    reporting_period = project.get("reporting_period") or f"{project.get('cohort_year', 'Current')} cohort"
+
     meta = Table(
         [[
             Paragraph("<b>Prepared for</b><br/>Leadership and funders", styles["body"]),
             Paragraph("<b>Data sources</b><br/>Surveys, trackers, testimonials", styles["body"]),
-            Paragraph(f"<b>Reporting period</b><br/>{project.get('cohort_year', 'Current')} cohort", styles["body"]),
+            Paragraph(f"<b>Reporting period</b><br/>{reporting_period}", styles["body"]),
         ]],
         colWidths=[2.15 * inch, 2.15 * inch, 2.15 * inch],
     )

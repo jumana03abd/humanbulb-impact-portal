@@ -237,7 +237,9 @@ def find_participant_key(df: pd.DataFrame) -> str | None:
     normalized = {normalize_name(str(col)): str(col) for col in df.columns}
     for candidate in [
         "email",
+        "participantidentifier",
         "participantid",
+        "participantkey",
         "internid",
         "studentid",
         "fullname",
@@ -515,7 +517,7 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
     both_completion_rate = _rate(both_completed_count, denominator)
     resume_verified_rate = _rate(resume_verified_count, denominator)
 
-    program_completion_rate = _rate(_unique_participants(post_df), cohort_size) if cohort_size and not post_df.empty else None
+    program_completion_rate = None
 
     deliverable_columns = {normalize_name(str(col)): str(col) for col in deliverables_df.columns} if not deliverables_df.empty else {}
     project_col = next((col for key, col in deliverable_columns.items() if "projectinitiative" in key or "projectorinitiative" in key), None)
@@ -585,7 +587,6 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
     ]
 
     enrollment_status, enrollment_tone = _status_from_target(float(interns_served or 0), 30)
-    completion_status, completion_tone = _status_from_target(program_completion_rate, 90)
     awareness_status, awareness_tone = _status_from_target(clean_tech_improved_rate, 80)
     career_materials_status, career_materials_tone = _status_from_target(both_completion_rate, 85)
     workplace_status, workplace_tone = _status_from_target(workplace_improved_rate, 85)
@@ -599,14 +600,6 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
             "actual": f"{interns_served or 0} enrolled",
             "status": enrollment_status,
             "statusTone": enrollment_tone,
-        },
-        {
-            "title": "Program Completion",
-            "description": "Participants who completed the full 8-week internship experience.",
-            "target": "90% completion",
-            "actual": percent_string(program_completion_rate),
-            "status": completion_status,
-            "statusTone": completion_tone,
         },
         {
             "title": "Clean Tech Awareness",
@@ -676,7 +669,6 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
 
     analyst_notes = [
         "Pre/post comparisons only include matched participants with responses in both survey datasets.",
-        "Program completion currently uses Week 8 post-survey participation as the working proxy until HUMANBULB defines a stricter completion rule.",
         "Career confidence is measurable from the current survey, but career clarity is not directly captured by the current question set.",
         "Resume and LinkedIn metrics are calculated from uploaded tracker URLs and staff verification fields, not estimated.",
         "Weekly check-ins and deliverables provide supporting evidence, project activity context, and qualitative reporting themes.",

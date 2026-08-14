@@ -27,12 +27,17 @@ class CohortSizeRequest(BaseModel):
     cohort_size: int = Field(ge=0, le=100000)
 
 
+class ReportingPeriodRequest(BaseModel):
+    reporting_period: str = Field(min_length=1, max_length=120)
+
+
 class ProjectSummary(BaseModel):
     id: str
     organization_id: str
     name: str
     cohort_year: int | None = None
     cohort_size: int = 0
+    reporting_period: str = ""
     status: str
     created_at: datetime
     updated_at: datetime
@@ -135,6 +140,7 @@ class GrantSummaryResponse(BaseModel):
     metrics: list[dict[str, str]]
     objectives: list[ObjectiveCard]
     quote: str
+    quotes: list[str]
     narrative: str
     executive_summary: str
     report_id: str | None = None

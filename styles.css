@@ -1285,9 +1285,27 @@ blockquote {
 .grant-meta-item strong,
 .grant-list li,
 #grant-narrative,
-#grant-quote {
+.grant-quote-card blockquote {
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.grant-quote-list {
+  display: grid;
+  gap: 12px;
+}
+
+.grant-quote-card {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(220, 238, 226, 0.46), rgba(252, 243, 193, 0.28));
+  border: 1px solid rgba(169, 199, 181, 0.42);
+}
+
+.grant-quote-card blockquote {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.55;
 }
 
 .axis-label {

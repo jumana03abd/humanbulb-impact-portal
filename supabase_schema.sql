@@ -23,6 +23,7 @@ create table if not exists projects (
   name text not null,
   cohort_year integer,
   cohort_size integer not null default 0,
+  reporting_period text not null default '',
   status text not null default 'draft',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
