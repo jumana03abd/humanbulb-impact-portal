@@ -4,61 +4,67 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign In | HUMANBULB Impact Portal</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20260817">
 </head>
-<body data-page="login">
-  <main class="main-content" style="min-height:100vh;place-content:center;padding:32px;">
-    <section class="card auth-card">
-      <div class="auth-step" id="email-step">
-        <p class="eyebrow">HUMANBULB</p>
-        <h2>Access the Impact Portal</h2>
-        <p class="hero-text">Enter your HUMANBULB staff email to continue.</p>
+<body data-page="login" class="auth-page">
+  <main class="auth-shell">
+    <section class="auth-panel">
+      <div class="auth-panel-inner">
+        <p class="eyebrow auth-eyebrow">HUMANBULB IMPACT PORTAL</p>
+        <h1 class="auth-title" id="auth-title">Sign in</h1>
+        <p class="auth-subtitle" id="auth-subtitle">Access your approved staff account.</p>
 
-        <form class="auth-form" id="email-step-form">
-          <label>
-            <span>Email</span>
-            <input id="staff-email" type="email" required autocomplete="email">
-          </label>
-          <div class="hero-actions">
-            <button class="button primary button-reset" type="submit">Continue</button>
-          </div>
-          <p class="helper-text">Access is limited to approved HUMANBULB staff accounts.</p>
-        </form>
+        <div class="auth-mode-switch" role="tablist" aria-label="Authentication mode">
+          <button class="auth-mode-button is-active button-reset" type="button" data-auth-mode="signin" aria-pressed="true">Sign in</button>
+          <button class="auth-mode-button button-reset" type="button" data-auth-mode="signup" aria-pressed="false">Sign up</button>
+        </div>
+
+        <div class="auth-pane" id="signin-pane">
+          <form class="auth-form auth-form-modern" id="signin-form">
+            <label>
+              <span>Email address</span>
+              <input id="signin-email" type="email" required autocomplete="email">
+            </label>
+            <label>
+              <span>Password</span>
+              <div class="password-field modern-password-field">
+                <input id="signin-password" type="password" required minlength="8" autocomplete="current-password">
+                <button class="password-toggle button-reset" type="button" data-password-toggle="signin-password" aria-label="Show password">Show</button>
+              </div>
+            </label>
+            <button class="button primary button-reset auth-submit" type="submit">Sign in</button>
+          </form>
+        </div>
+
+        <div class="auth-pane" id="signup-pane" hidden>
+          <form class="auth-form auth-form-modern" id="signup-form">
+            <label>
+              <span>Email address</span>
+              <input id="signup-email" type="email" required autocomplete="email">
+            </label>
+            <label>
+              <span>Pick a password</span>
+              <div class="password-field modern-password-field">
+                <input id="signup-password" type="password" required minlength="8" autocomplete="new-password">
+                <button class="password-toggle button-reset" type="button" data-password-toggle="signup-password" aria-label="Show password">Show</button>
+              </div>
+            </label>
+            <label>
+              <span>Re-enter password</span>
+              <div class="password-field modern-password-field">
+                <input id="signup-confirm-password" type="password" required minlength="8" autocomplete="new-password">
+                <button class="password-toggle button-reset" type="button" data-password-toggle="signup-confirm-password" aria-label="Show password">Show</button>
+              </div>
+            </label>
+            <button class="button primary button-reset auth-submit" type="submit">Create account</button>
+          </form>
+        </div>
+
+        <p class="helper-text auth-helper-text">Portal access is limited to approved HUMANBULB staff accounts.</p>
+        <p class="auth-message" id="auth-message"></p>
       </div>
-
-      <div class="auth-step" id="password-step" hidden>
-        <p class="eyebrow">HUMANBULB</p>
-        <h2>Create or enter your portal password</h2>
-        <p class="hero-text">Use your approved staff email and choose a password. If this is your first time, we will create your portal access. If you already have access, we will sign you in.</p>
-
-        <div class="auth-email-pill" id="selected-email"></div>
-
-        <form class="auth-form" id="password-step-form">
-          <label>
-            <span>Password</span>
-            <div class="password-field">
-              <input id="auth-password" type="password" required minlength="8" autocomplete="new-password">
-              <button class="password-toggle button-reset" type="button" data-password-toggle="auth-password" aria-label="Show password">Show</button>
-            </div>
-          </label>
-          <label>
-            <span>Confirm Password</span>
-            <div class="password-field">
-              <input id="auth-confirm-password" type="password" required minlength="8" autocomplete="new-password">
-              <button class="password-toggle button-reset" type="button" data-password-toggle="auth-confirm-password" aria-label="Show password">Show</button>
-            </div>
-          </label>
-          <div class="hero-actions auth-step-actions">
-            <button class="button secondary button-reset" type="button" id="back-to-email-button">Back</button>
-            <button class="button primary button-reset" type="submit" id="password-submit-button">Enter Portal</button>
-          </div>
-          <p class="helper-text">Use the same password each time you return to the portal.</p>
-        </form>
-      </div>
-
-      <p class="auth-message" id="auth-message"></p>
     </section>
   </main>
-  <script src="app.js"></script>
+  <script src="app.js?v=20260817"></script>
 </body>
 </html>
