@@ -203,6 +203,41 @@ async function loadCurrentProject() {
   return payload;
 }
 
+async function signOut() {
+  // End the current staff session and return the browser to the login screen.
+  await apiFetch("/api/auth/logout", {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+  appState.user = null;
+  appState.project = null;
+  appState.setupComponents = [];
+  appState.setupProgress = null;
+  appState.dashboard = null;
+  appState.analytics = null;
+  appState.grant = null;
+  window.location.href = "login.html";
+}
+
+function wireSignOutButton() {
+  // Connect the sidebar sign-out button to the existing logout endpoint.
+  const button = document.getElementById("sign-out-button");
+  if (!button || button.dataset.bound === "true") return;
+  button.dataset.bound = "true";
+  button.addEventListener("click", async () => {
+    const originalLabel = button.textContent;
+    button.textContent = "Signing out...";
+    button.disabled = true;
+    try {
+      await signOut();
+    } catch (error) {
+      button.textContent = originalLabel;
+      button.disabled = false;
+      alert(error.message || "Unable to sign out.");
+    }
+  });
+}
+
 function updateSidebarCopy() {
   // Adjust sidebar context so each screen reflects the current project state.
   const sidebarStrong = document.querySelector(".sidebar-card strong");
@@ -512,6 +547,7 @@ async function renderAdminPage() {
   // Boot the setup workspace with the current organization project state.
   await requireSession();
   await loadCurrentProject();
+  wireSignOutButton();
   renderSimpleSetup();
   wireSimpleSetup();
 }
@@ -523,6 +559,7 @@ async function renderDashboardPage() {
   const payload = await apiFetch("/api/projects/current/dashboard");
   appState.dashboard = payload;
   updateSidebarCopy();
+  wireSignOutButton();
   renderList("dashboard-metrics", payload.metrics, metricMarkup);
   renderList("grant-objectives-grid", payload.grantObjectives, (item) => `
     <article class="objective-card">
@@ -555,6 +592,7 @@ async function renderAnalyticsPage() {
   // Render the before/after comparison page and response distribution charts.
   await requireSession();
   await loadCurrentProject();
+  wireSignOutButton();
   const payload = await apiFetch("/api/projects/current/analytics");
   appState.analytics = payload;
   updateSidebarCopy();
@@ -594,8 +632,52 @@ async function renderGrantPage() {
   // Render the grant-summary screen that previews the eventual exported PDF.
   await requireSession();
   await loadCurrentProject();
+  wireSignOutButton();
   const payload = await apiFetch("/api/projects/current/grant-summary");
   appState.grant = payload;
+  const internsServedMetric = Array.isArray(payload.metrics)
+    ? payload.metrics.find((item) => String(item.label || "").toLowerCase().includes("interns served"))
+    : null;
+  const deliverablesMetric = Array.isArray(payload.metrics)
+    ? payload.metrics.find((item) => String(item.label || "").toLowerCase().includes("deliverables"))
+    : null;
+  const materialsObjective = Array.isArray(payload.objectives)
+    ? payload.objectives.find((item) => String(item.title || "").toLowerCase().includes("career materials"))
+    : null;
+  const cleanTechObjective = Array.isArray(payload.objectives)
+    ? payload.objectives.find((item) => String(item.title || "").toLowerCase().includes("clean tech awareness"))
+    : null;
+  const workplaceObjective = Array.isArray(payload.objectives)
+    ? payload.objectives.find((item) => String(item.title || "").toLowerCase().includes("workplace readiness"))
+    : null;
+  const projectSummaryText = [
+    "Green Careers Launchpad combines career exposure, workplace readiness development, and project-based learning for interns exploring green career pathways.",
+    internsServedMetric?.value ? `The current reporting set reflects ${internsServedMetric.value} interns served` : "",
+    deliverablesMetric?.value ? `${deliverablesMetric.value} deliverables logged` : "",
+    materialsObjective?.actual ? `and ${materialsObjective.actual} achievement on resume and LinkedIn completion tracked through staff-verified records.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const expandedExecutiveSummary = [
+    payload.executive_summary,
+    internsServedMetric?.value ? `The current dataset captures ${internsServedMetric.value} interns served across the connected reporting period.` : "",
+    cleanTechObjective ? `Clean-tech awareness is being tracked against a goal of ${cleanTechObjective.target} with ${cleanTechObjective.actual} achieved.` : "",
+    workplaceObjective ? `Workplace-readiness growth is being tracked against a goal of ${workplaceObjective.target} with ${workplaceObjective.actual} achieved.` : "",
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const expandedGrantNarrative = [
+    payload.narrative,
+    ...(Array.isArray(payload.objectives) ? payload.objectives.slice(0, 3).map((item) => `${item.title} is currently measured against a goal of ${item.target} with ${item.actual} achieved.`) : []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
   renderList("grant-metrics", payload.metrics, (item) => `
     <div class="grant-metric">
       <strong>${item.value}</strong>
@@ -609,24 +691,26 @@ async function renderGrantPage() {
         <p>${item.description}</p>
       </div>
       <div class="grant-objective-values">
-        <span>Target: ${item.target}</span>
-        <strong>${item.actual}</strong>
+        <span>Goal: ${item.target}</span>
+        <strong>Achieved: ${item.actual}</strong>
       </div>
     </div>
   `);
   const executiveSummary = document.getElementById("grant-executive-summary");
+  const projectSummary = document.getElementById("grant-project-summary");
   const reportingPeriod = document.getElementById("grant-reporting-period");
   const quotesContainer = document.getElementById("grant-quotes");
   const narrative = document.getElementById("grant-narrative");
-  if (executiveSummary) executiveSummary.textContent = payload.executive_summary;
+  if (executiveSummary) executiveSummary.textContent = expandedExecutiveSummary;
+  if (projectSummary) projectSummary.textContent = projectSummaryText;
   if (reportingPeriod) reportingPeriod.textContent = payload.project?.reporting_period || `${payload.project?.cohort_year || "Current"} cohort`;
   if (quotesContainer) {
     const sourceQuotes = Array.isArray(payload.quotes) && payload.quotes.length ? payload.quotes : [payload.quote].filter(Boolean);
     const trimmedQuotes = sourceQuotes.slice(0, 3).map((quoteText) => {
       const normalized = String(quoteText || "").replace(/\s+/g, " ").trim();
-      if (normalized.length <= 180) return normalized;
-      const sentenceBreak = normalized.slice(0, 180).lastIndexOf('. ');
-      const cutoff = sentenceBreak > 80 ? sentenceBreak + 1 : 177;
+      if (normalized.length <= 220) return normalized;
+      const sentenceBreak = normalized.slice(0, 220).lastIndexOf('. ');
+      const cutoff = sentenceBreak > 100 ? sentenceBreak + 1 : 217;
       return `${normalized.slice(0, cutoff).trim()}...`;
     });
     quotesContainer.innerHTML = trimmedQuotes.map((quoteText) => `
@@ -635,13 +719,7 @@ async function renderGrantPage() {
       </div>
     `).join("");
   }
-  renderFeaturedPhotos(
-    "grant-featured-photos",
-    payload.featuredPhotos,
-    "Awaiting photo upload",
-    "Upload individual photos or a ZIP of the program photo folder to include visuals in the grant-ready summary."
-  );
-  if (narrative) narrative.textContent = payload.narrative;
+  if (narrative) narrative.textContent = expandedGrantNarrative;
   wireGrantExport();
 }
 

@@ -564,6 +564,7 @@ async def generate_and_store_report(user: AuthenticatedUser, project: dict[str, 
             "executive_summary": analysis["executive_summary"],
             "grant_narrative": analysis["grant_narrative"],
             "participant_quote": analysis["selected_quote"],
+            "participant_quotes": analysis.get("quotes", []),
         },
     )
     report_id = str(uuid4())
@@ -586,6 +587,7 @@ async def generate_and_store_report(user: AuthenticatedUser, project: dict[str, 
                     "executive_summary": analysis["executive_summary"],
                     "grant_narrative": analysis["grant_narrative"],
                     "participant_quote": analysis["selected_quote"],
+                    "participant_quotes": analysis.get("quotes", []),
                 }
             ),
             storage_path,

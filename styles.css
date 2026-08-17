@@ -88,9 +88,17 @@ body::after {
 }
 
 .brand-block {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.brand-lockup {
   display: grid;
   gap: 14px;
-  margin-bottom: 28px;
+  min-width: 0;
 }
 
 .brand-logo {
@@ -146,6 +154,17 @@ body::after {
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.brand-signout {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 0 16px;
+  margin-top: 4px;
+}
+
+.sidebar-signout {
+  display: none;
 }
 
 .sidebar-card p,
@@ -1241,6 +1260,100 @@ body::after {
   color: var(--text);
 }
 
+.grant-flow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.grant-flow-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(29, 53, 87, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+  min-width: 0;
+}
+
+.grant-flow-step div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.grant-flow-step strong {
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.grant-flow-step span:last-child {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.grant-flow-number {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, #21436e, #173154);
+}
+
+.flow-summary .grant-flow-number,
+.tone-summary {
+  border-color: rgba(33, 67, 110, 0.16);
+}
+
+.flow-project .grant-flow-number {
+  background: linear-gradient(135deg, #3a9469, #2c7e59);
+}
+
+.tone-project {
+  border-color: rgba(58, 148, 105, 0.16);
+  background: linear-gradient(180deg, rgba(227, 243, 234, 0.7), rgba(255, 255, 255, 0.96));
+}
+
+.flow-outcomes .grant-flow-number {
+  background: linear-gradient(135deg, #2a8aa1, #236f82);
+}
+
+.tone-outcomes {
+  border-color: rgba(42, 138, 161, 0.16);
+  background: linear-gradient(180deg, rgba(233, 246, 249, 0.72), rgba(255, 255, 255, 0.96));
+}
+
+.flow-credibility .grant-flow-number {
+  background: linear-gradient(135deg, #f0b323, #cb9518);
+}
+
+.tone-credibility {
+  border-color: rgba(240, 179, 35, 0.22);
+  background: linear-gradient(180deg, rgba(255, 247, 214, 0.82), rgba(255, 255, 255, 0.96));
+}
+
+.flow-close .grant-flow-number {
+  background: linear-gradient(135deg, #72559e, #5f4588);
+}
+
+.tone-close {
+  border-color: rgba(114, 85, 158, 0.18);
+  background: linear-gradient(180deg, rgba(243, 238, 251, 0.78), rgba(255, 255, 255, 0.96));
+}
+
+.tone-summary {
+  background: linear-gradient(180deg, rgba(231, 239, 251, 0.8), rgba(255, 255, 255, 0.96));
+}
+
 .grant-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1313,6 +1426,7 @@ blockquote {
 
 .grant-quote-list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -1356,6 +1470,7 @@ blockquote {
   .two-col,
   .three-col,
   .four-col,
+  .grant-flow,
   .grant-grid,
   .grant-meta-row,
   .insight-grid,
@@ -1400,7 +1515,8 @@ blockquote {
   }
 
   .photo-grid,
-  .grant-metrics {
+  .grant-metrics,
+  .grant-quote-list {
     grid-template-columns: 1fr;
   }
 
