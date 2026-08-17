@@ -278,7 +278,8 @@ async def grant_summary(user: AuthenticatedUser = Depends(authenticate_request))
         """,
         (project["id"], user.organization_id),
     )
-    pdf_download_url = f"/api/reports/{latest_report['id']}/download" if latest_report else None
+    report_id = str(latest_report["id"]) if latest_report else None
+    pdf_download_url = f"/api/reports/{report_id}/download" if report_id else None
     return GrantSummaryResponse(
         project=serialize_project_summary(project),
         metrics=[{"value": item["value"], "label": item["label"].lower()} for item in analysis["metrics"][:4]],
@@ -288,7 +289,7 @@ async def grant_summary(user: AuthenticatedUser = Depends(authenticate_request))
         narrative=analysis["grant_narrative"],
         executive_summary=analysis["executive_summary"],
         featuredPhotos=analysis.get("featured_photos", []),
-        report_id=latest_report["id"] if latest_report else None,
+        report_id=report_id,
         pdf_download_url=pdf_download_url,
         generated_at=latest_report["created_at"] if latest_report else analysis.get("calculated_at"),
     )
@@ -329,17 +330,19 @@ async def build_pdf(user: AuthenticatedUser = Depends(authenticate_request)) -> 
     project = get_or_create_current_project(user)
     analysis = await ensure_analysis(user, project)
     record = await generate_and_store_report(user, project, analysis)
-    return {"report_id": record["id"], "download_url": f"/api/reports/{record['id']}/download"}
+    report_id = str(record["id"])
+    return {"report_id": report_id, "download_url": f"/api/reports/{report_id}/download"}
 
 
 @app.get("/api/reports/{report_id}/download")
 async def download_report(report_id: str, user: AuthenticatedUser = Depends(authenticate_request)) -> StreamingResponse:
     """Stream a previously generated PDF report back to the signed-in staff user."""
     from .db import fetch_one
+    from datetime import datetime
 
     report = fetch_one(
         """
-        select storage_path
+        select storage_path, created_at
         from reports
         where id = %s and organization_id = %s
         """,
@@ -348,7 +351,22 @@ async def download_report(report_id: str, user: AuthenticatedUser = Depends(auth
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found.")
     payload = await StorageClient(settings).download_bytes(settings.supabase_bucket_reports, report["storage_path"])
-    return StreamingResponse(iter([payload]), media_type="application/pdf", headers={"Content-Disposition": 'attachment; filename="humanbulb-grant-summary.pdf"'})
+    created_at = report.get("created_at")
+    if isinstance(created_at, datetime):
+        stamp = created_at.strftime("%Y%m%d-%H%M%S")
+    else:
+        stamp = str(report_id)
+    filename = f"humanbulb-grant-summary-{stamp}.pdf"
+    return StreamingResponse(
+        iter([payload]),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
 @app.get("/login.html", include_in_schema=False)

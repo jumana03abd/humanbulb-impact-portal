@@ -10,10 +10,11 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand-block">
-        <div>
+        <div class="brand-lockup">
           <img class="brand-logo" src="assets/humanbulb-logo.png" alt="HUMANBULB logo">
           <h1>Impact Portal</h1>
         </div>
+        <button class="button secondary brand-signout" id="sign-out-button" type="button">Sign Out</button>
       </div>
       <nav class="side-nav">
         <a class="nav-link" href="admin.html">Setup Workspace</a>
@@ -71,34 +72,72 @@
           </div>
         </div>
 
+        <div class="grant-flow" aria-label="Grant summary flow">
+          <div class="grant-flow-step flow-summary">
+            <span class="grant-flow-number">1</span>
+            <div>
+              <strong>Executive Summary</strong>
+              <span>Frame the core program story and reporting context.</span>
+            </div>
+          </div>
+          <div class="grant-flow-step flow-project">
+            <span class="grant-flow-number">2</span>
+            <div>
+              <strong>Project</strong>
+              <span>Show how the internship delivers exposure and support.</span>
+            </div>
+          </div>
+          <div class="grant-flow-step flow-outcomes">
+            <span class="grant-flow-number">3</span>
+            <div>
+              <strong>Outcomes</strong>
+              <span>Compare milestone goals with achieved results.</span>
+            </div>
+          </div>
+          <div class="grant-flow-step flow-credibility">
+            <span class="grant-flow-number">4</span>
+            <div>
+              <strong>Credibility</strong>
+              <span>Use participant voices to validate the data story.</span>
+            </div>
+          </div>
+          <div class="grant-flow-step flow-close">
+            <span class="grant-flow-number">5</span>
+            <div>
+              <strong>Grant-Ready Summary</strong>
+              <span>Close with a concise funder-ready narrative.</span>
+            </div>
+          </div>
+        </div>
+
         <div class="grant-grid">
-          <div class="grant-block">
+          <div class="grant-block span-two tone-summary">
             <p class="eyebrow">Executive Summary</p>
             <p id="grant-executive-summary"></p>
           </div>
 
-          <div class="grant-block">
-            <p class="eyebrow">Headline Outcomes</p>
+          <div class="grant-block span-two tone-project">
+            <p class="eyebrow">Project</p>
+            <p id="grant-project-summary"></p>
+          </div>
+
+          <div class="grant-block tone-outcomes">
+            <p class="eyebrow">Outcomes Snapshot</p>
             <div class="grant-metrics" id="grant-metrics"></div>
           </div>
 
-          <div class="grant-block span-two">
-            <p class="eyebrow">Cohort Milestones</p>
+          <div class="grant-block span-two tone-outcomes">
+            <p class="eyebrow">Outcomes</p>
             <div class="grant-objective-list" id="grant-objective-list"></div>
           </div>
 
-          <div class="grant-block">
-            <p class="eyebrow">Participant Voices</p>
+          <div class="grant-block span-two tone-credibility">
+            <p class="eyebrow">Credibility</p>
             <div class="grant-quote-list" id="grant-quotes"></div>
           </div>
 
-          <div class="grant-block span-two">
-            <p class="eyebrow">Program Photos</p>
-            <div class="photo-grid compact" id="grant-featured-photos"></div>
-          </div>
-
-          <div class="grant-block span-two">
-            <p class="eyebrow">Grant-Ready Narrative</p>
+          <div class="grant-block span-two tone-close">
+            <p class="eyebrow">Grant-Ready Summary</p>
             <p id="grant-narrative"></p>
           </div>
         </div>
