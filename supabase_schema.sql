@@ -20,6 +20,7 @@ create table if not exists projects (
   id uuid primary key,
   organization_id uuid not null references organizations(id) on delete cascade,
   owner_user_id text not null,
+  workspace_owner_user_id text,
   name text not null,
   cohort_year integer,
   cohort_size integer not null default 0,
@@ -66,5 +67,7 @@ create table if not exists reports (
 );
 
 create index if not exists idx_projects_org on projects (organization_id);
+create index if not exists idx_projects_workspace_owner
+  on projects (organization_id, workspace_owner_user_id);
 create index if not exists idx_uploads_project on project_uploads (project_id, component);
 create index if not exists idx_reports_project on reports (project_id, created_at desc);

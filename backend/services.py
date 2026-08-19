@@ -149,27 +149,41 @@ async def extract_zip_featured_images(
 
 
 def get_or_create_current_project(user: AuthenticatedUser) -> dict[str, Any]:
-    """Return the latest project for an organization or create a fresh cohort shell."""
+    """Return a staff member's private workspace or create a blank cohort shell."""
     project = fetch_one(
         """
         select id, organization_id, name, cohort_year, cohort_size, reporting_period, status, created_at, updated_at
         from projects
         where organization_id = %s
+          and workspace_owner_user_id = %s
         order by updated_at desc
         limit 1
         """,
-        (user.organization_id,),
+        (user.organization_id, user.user_id),
     )
     if project:
         return project
 
     return execute_returning(
         """
-        insert into projects (id, organization_id, owner_user_id, name, cohort_year, cohort_size, reporting_period, status)
-        values (%s, %s, %s, %s, %s, %s, %s, %s)
+        insert into projects (
+          id, organization_id, owner_user_id, workspace_owner_user_id,
+          name, cohort_year, cohort_size, reporting_period, status
+        )
+        values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
         returning id, organization_id, name, cohort_year, cohort_size, reporting_period, status, created_at, updated_at
         """,
-        (str(uuid4()), user.organization_id, user.user_id, "Green Careers Launchpad", now_utc().year, 0, "", "draft"),
+        (
+            str(uuid4()),
+            user.organization_id,
+            user.user_id,
+            user.user_id,
+            "Green Careers Launchpad",
+            now_utc().year,
+            0,
+            "",
+            "draft",
+        ),
     )
 
 

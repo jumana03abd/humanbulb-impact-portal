@@ -55,14 +55,26 @@ app = FastAPI(title="HUMANBULB Impact Portal API")
 
 
 @app.on_event("startup")
-async def ensure_reporting_period_column() -> None:
-    """Create the reporting-period column when the local app boots."""
+async def ensure_project_columns() -> None:
+    """Add non-destructive project columns required by newer portal releases."""
     from .db import execute
 
     execute(
         """
         alter table projects
         add column if not exists reporting_period text not null default ''
+        """
+    )
+    execute(
+        """
+        alter table projects
+        add column if not exists workspace_owner_user_id text
+        """
+    )
+    execute(
+        """
+        create index if not exists idx_projects_workspace_owner
+        on projects (organization_id, workspace_owner_user_id)
         """
     )
 

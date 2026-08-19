@@ -915,29 +915,33 @@ function renderGroupedHorizontalChart(targetId, items, options) {
     );
     return;
   }
-  const width = 880;
-  const rowHeight = 66;
-  const height = Math.max(items.length, 1) * rowHeight + 40;
-  const labelSpace = 470;
-  const barWidth = width - labelSpace - 48;
+  const width = 1080;
+  const rowHeight = 88;
+  const topPadding = 86;
+  const bottomPadding = 54;
+  const barHeight = 22;
+  const barGap = 18;
+  const height = topPadding + Math.max(items.length, 1) * rowHeight + bottomPadding;
+  const labelSpace = 560;
+  const barWidth = width - labelSpace - 86;
 
   const rows = items.map((item, index) => {
-    const y = 24 + index * rowHeight;
+    const y = topPadding + index * rowHeight;
     const beforeW = (item.before / options.max) * barWidth;
     const afterW = (item.after / options.max) * barWidth;
     return `
-      <text class="axis-label axis-label-large" x="8" y="${y + 20}">${item.label}</text>
-      <rect x="${labelSpace}" y="${y}" width="${beforeW}" height="16" rx="8" fill="${options.colors[0]}"></rect>
-      <rect x="${labelSpace}" y="${y + 22}" width="${afterW}" height="16" rx="8" fill="${options.colors[1]}"></rect>
-      <text class="axis-label" x="${labelSpace + beforeW + 8}" y="${y + 12}">${item.before.toFixed(1)}</text>
-      <text class="axis-label" x="${labelSpace + afterW + 8}" y="${y + 34}">${item.after.toFixed(1)}</text>
+      <text class="axis-label axis-label-large" x="22" y="${y + 30}">${item.label}</text>
+      <rect x="${labelSpace}" y="${y}" width="${beforeW}" height="${barHeight}" rx="11" fill="${options.colors[0]}"></rect>
+      <rect x="${labelSpace}" y="${y + barHeight + barGap}" width="${afterW}" height="${barHeight}" rx="11" fill="${options.colors[1]}"></rect>
+      <text class="axis-label" x="${labelSpace + beforeW + 14}" y="${y + 16}">${item.before.toFixed(1)}</text>
+      <text class="axis-label" x="${labelSpace + afterW + 14}" y="${y + barHeight + barGap + 16}">${item.after.toFixed(1)}</text>
     `;
   }).join("");
 
   el.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Before and after comparison chart">
-      <text class="axis-label" x="${labelSpace}" y="16">${options.labels[0]}</text>
-      <text class="axis-label" x="${labelSpace}" y="38">${options.labels[1]}</text>
+    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Before and after comparison chart" preserveAspectRatio="xMinYMin meet">
+      <text class="axis-label" x="${labelSpace}" y="34">${options.labels[0]}</text>
+      <text class="axis-label" x="${labelSpace}" y="64">${options.labels[1]}</text>
       ${rows}
     </svg>
   `;
@@ -955,11 +959,15 @@ function renderStackedBars(targetId, items) {
     );
     return;
   }
-  const width = 680;
-  const height = 260;
-  const padding = 24;
-  const barWidth = 220;
-  const gap = 110;
+  const width = 1100;
+  const height = 520;
+  const chartTop = 168;
+  const barHeight = 62;
+  const barRadius = 22;
+  const barWidth = 340;
+  const gap = 140;
+  const startX = 72;
+  const secondX = startX + barWidth + gap;
   const totals = {
     before: items.reduce((sum, item) => sum + item.before, 0) || 1,
     after: items.reduce((sum, item) => sum + item.after, 0) || 1
@@ -970,27 +978,28 @@ function renderStackedBars(targetId, items) {
     let offset = 0;
     const rects = items.map((item, index) => {
       const widthPx = (item[field] / totals[field]) * barWidth;
-      const rect = `<rect x="${x + offset}" y="96" width="${widthPx}" height="42" rx="14" fill="${colors[index]}"></rect>`;
+      const rect = `<rect x="${x + offset}" y="${chartTop}" width="${widthPx}" height="${barHeight}" rx="${barRadius}" fill="${colors[index]}"></rect>`;
       offset += widthPx;
       return rect;
     }).join("");
 
     return `
-      <text class="axis-label axis-label-large" x="${x}" y="72">${label}</text>
+      <text class="axis-label axis-label-large" x="${x}" y="132">${label}</text>
       ${rects}
-      <text class="axis-label" x="${x}" y="158">100% of response distribution</text>
+      <text class="axis-label" x="${x}" y="${chartTop + barHeight + 44}">100% of response distribution</text>
     `;
   }
 
+  const legendTop = chartTop + barHeight + 92;
   const legend = items.map((item, index) => `
-    <rect x="${padding}" y="${184 + index * 22}" width="14" height="14" rx="4" fill="${colors[index]}"></rect>
-    <text class="axis-label axis-label-large" x="${padding + 24}" y="${195 + index * 22}">${item.label}</text>
+    <rect x="${startX}" y="${legendTop + index * 56}" width="24" height="24" rx="7" fill="${colors[index]}"></rect>
+    <text class="axis-label axis-label-large" x="${startX + 42}" y="${legendTop + 19 + index * 56}">${item.label}</text>
   `).join("");
 
   el.innerHTML = `
     <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Confidence distribution stacked chart">
-      ${buildStack(24, "Week 1", "before")}
-      ${buildStack(24 + barWidth + gap, "Week 8", "after")}
+      ${buildStack(startX, "Week 1", "before")}
+      ${buildStack(secondX, "Week 8", "after")}
       ${legend}
     </svg>
   `;
