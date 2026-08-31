@@ -1,0 +1,13 @@
+.env
+.git
+.venv
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+node_modules
+tmp
+output
+outputs/resume-linkedin-tracker/node_modules
+*.xlsx
+*.pdf

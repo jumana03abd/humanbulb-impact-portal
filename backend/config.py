@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     supabase_bucket_uploads: str = Field(default="portal-uploads", alias="SUPABASE_BUCKET_UPLOADS")
     supabase_bucket_reports: str = Field(default="portal-reports", alias="SUPABASE_BUCKET_REPORTS")
     database_url: str = Field(alias="DATABASE_URL")
+    database_connect_timeout_seconds: int = Field(default=5, alias="DATABASE_CONNECT_TIMEOUT_SECONDS")
 
     openai_api_key: str | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-5-mini", alias="OPENAI_MODEL")

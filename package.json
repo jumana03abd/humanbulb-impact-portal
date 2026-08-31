@@ -5,7 +5,7 @@
   "description": "HUMANBULB Impact Portal MVP prototype for program evaluation, analytics, and grant-ready reporting.",
   "scripts": {
     "dev": "uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000",
-    "start": "uvicorn backend.main:app --host 0.0.0.0 --port 8000",
+    "start": "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}",
     "pdf:grant-mock": "python3 scripts/generate_mock_grant_pdf.py",
     "pdf:legacy-mock": "python3 generate_mock_pdf.py",
     "tracker:build": "node outputs/resume-linkedin-tracker-builder.mjs"

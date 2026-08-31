@@ -1,3 +1,9 @@
+"""Authentication helpers for the HUMANBULB Impact Portal.
+
+encapsulates Supabase auth calls, allowlist enforcement, and the
+organization-membership checks that keep staff scoped to HUMANBULB data.
+"""
+
 from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4

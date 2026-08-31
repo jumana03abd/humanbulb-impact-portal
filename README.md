@@ -83,16 +83,26 @@ uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 http://127.0.0.1:8000/login.html
 ```
 
+9. Run the local regression suite:
+
+```bash
+python -m unittest discover -s tests
+```
+
+GitHub Actions runs the same regression suite and JavaScript syntax check on every push and pull request.
+
 ## Locked Upload Schemas
 
 The portal now validates spreadsheet uploads against explicit schema rules before analysis begins.
 
 - `Week 1 Pre-Survey`
-  - Required: participant identifier, clean tech knowledge, interview confidence, resume readiness, career clarity, workplace readiness
+  - Required: participant identifier, clean tech knowledge, interview confidence, workplace readiness
+  - Optional: resume readiness, career clarity, LinkedIn completion, program completion, testimonial text
 - `Weekly Check-In Surveys`
   - Required: participant identifier, week/check-in marker, reflection or response text
 - `Week 8 Post-Survey`
-  - Required: participant identifier, clean tech knowledge, interview confidence, resume readiness, career clarity, workplace readiness
+  - Required: participant identifier, clean tech knowledge, interview confidence, workplace readiness
+  - Optional: resume readiness, career clarity, LinkedIn completion, program completion, testimonial text
 - `Deliverables Tracker`
   - Required: intern/participant name, project or initiative, completion/status
 - `Resume & LinkedIn Completion Tracker`
@@ -107,13 +117,35 @@ The backend accepts common naming variations for each required field, but every 
 
 ## Production Deployment
 
-1. Deploy the FastAPI app to your Python host.
-2. Set production environment variables.
-3. Set `SESSION_COOKIE_SECURE=true`.
-4. Point your domain to the FastAPI app.
-5. Ensure the Supabase database schema and storage buckets exist.
-6. Restrict service-role credentials to the backend only.
-7. Set `PORTAL_ORGANIZATION_NAME`, `PORTAL_ORGANIZATION_SLUG`, and the HUMANBULB staff email allowlist variables in production.
+The repository includes a `Dockerfile` for any container host. It listens on the host-provided `PORT` and falls back to `8000` locally.
+
+1. Build and test the image locally:
+
+```bash
+docker build -t humanbulb-impact-portal .
+docker run --rm --env-file .env -p 8000:8000 humanbulb-impact-portal
+```
+
+2. Deploy the container image and configure a health check at `/health`; a `200` response confirms that required application settings loaded and Supabase PostgreSQL is reachable.
+3. Set production environment variables, including `SESSION_COOKIE_SECURE=true` and `APP_BASE_URL` to the public HTTPS URL.
+4. Ensure the Supabase database schema and private storage buckets exist.
+5. Restrict service-role credentials to the backend only.
+6. Set `PORTAL_ORGANIZATION_NAME`, `PORTAL_ORGANIZATION_SLUG`, and the HUMANBULB staff email allowlist variables in production.
+
+## Staging Smoke Test
+
+Run the real end-to-end workflow only against a dedicated, empty staging portal. The runner signs in as an approved staging staff account, uploads synthetic data, generates dashboard analytics and a PDF, then removes the test uploads and report. It intentionally refuses to run unless all safeguards are set:
+
+```bash
+export SMOKE_TEST_ENV=staging
+export SMOKE_TEST_CONFIRM=run-staging-smoke
+export SMOKE_TEST_BASE_URL=https://your-staging-portal.example.org
+export SMOKE_TEST_EMAIL=staging-smoke-test@humanbulb.org
+export SMOKE_TEST_PASSWORD='your-staging-password'
+python3 scripts/staging_smoke_test.py
+```
+
+Run this only against a dedicated staging portal and staging staff account. Staff can download or delete the latest saved PDF from the Grant Summary screen.
 
 ## Notes
 
