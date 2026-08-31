@@ -10,7 +10,11 @@ from .config import get_settings
 @contextmanager
 def get_db() -> Iterator[psycopg.Connection]:
     settings = get_settings()
-    with psycopg.connect(settings.database_url, row_factory=dict_row) as conn:
+    with psycopg.connect(
+        settings.database_url,
+        row_factory=dict_row,
+        connect_timeout=settings.database_connect_timeout_seconds,
+    ) as conn:
         yield conn
 
 

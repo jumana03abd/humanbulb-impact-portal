@@ -1,0 +1,134 @@
+from __future__ import annotations
+
+import asyncio
+import os
+import unittest
+from io import BytesIO
+from unittest.mock import AsyncMock, patch
+
+os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
+os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key")
+os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
+os.environ.setdefault("DATABASE_URL", "postgresql://postgres:password@localhost:5432/postgres")
+
+from fastapi import HTTPException, UploadFile
+from fastapi.testclient import TestClient
+
+import backend.main as main
+import backend.services as services
+from backend.auth import AuthenticatedUser
+
+
+class CoreApiTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.client = TestClient(main.app)
+        main.app.dependency_overrides[main.authenticate_request] = self.authenticated_user
+
+    def tearDown(self) -> None:
+        main.app.dependency_overrides.clear()
+
+    @staticmethod
+    def authenticated_user() -> AuthenticatedUser:
+        return AuthenticatedUser(
+            user_id="user-1",
+            email="staff@humanbulb.org",
+            organization_id="org-1",
+            organization_name="HUMANBULB",
+        )
+
+    def test_health_endpoint_confirms_database_connectivity(self) -> None:
+        with patch("backend.db.fetch_one", return_value={"connected": 1}) as fetch_one:
+            response = self.client.get("/health")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok", "database": "ok"})
+        fetch_one.assert_called_once_with("select 1 as connected")
+
+    def test_health_endpoint_returns_service_unavailable_when_database_fails(self) -> None:
+        with patch("backend.db.fetch_one", side_effect=RuntimeError("connection failed")):
+            response = self.client.get("/health")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["detail"], "Database unavailable.")
+
+    def test_report_deletion_removes_scoped_storage_and_record(self) -> None:
+        deleted_objects: list[tuple[str, str]] = []
+
+        async def delete_object(storage_client, bucket: str, path: str) -> None:
+            deleted_objects.append((bucket, path))
+
+        with patch("backend.db.fetch_one", return_value={"storage_path": "org-1/project-1/reports/report-1.pdf"}), patch(
+            "backend.db.execute"
+        ) as execute, patch.object(main.StorageClient, "delete_object", delete_object):
+            response = self.client.delete("/api/reports/report-1")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+        self.assertEqual(
+            deleted_objects,
+            [(main.settings.supabase_bucket_reports, "org-1/project-1/reports/report-1.pdf")],
+        )
+        execute.assert_called_once_with(
+            "delete from reports where id = %s and organization_id = %s",
+            ("report-1", "org-1"),
+        )
+
+    def test_report_deletion_rejects_reports_outside_the_organization(self) -> None:
+        with patch("backend.db.fetch_one", return_value=None), patch.object(
+            main.StorageClient, "delete_object", AsyncMock()
+        ) as delete_object:
+            response = self.client.delete("/api/reports/another-organization-report")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()["detail"], "Report not found.")
+        delete_object.assert_not_awaited()
+
+    def test_invalid_upload_is_rejected_before_storage(self) -> None:
+        uploaded_file = UploadFile(
+            filename="invalid-pre-survey.csv",
+            file=BytesIO(b"Email\nsmoke-test@humanbulb.org\n"),
+        )
+
+        with patch.object(main.StorageClient, "upload_bytes", AsyncMock()) as upload_bytes:
+            with self.assertRaises(HTTPException) as raised:
+                asyncio.run(
+                    services.save_upload(
+                        self.authenticated_user(),
+                        {"id": "project-1"},
+                        "pre",
+                        uploaded_file,
+                    )
+                )
+
+        self.assertEqual(raised.exception.status_code, 400)
+        self.assertIn("missing required fields", raised.exception.detail)
+        upload_bytes.assert_not_awaited()
+
+    def test_valid_upload_is_stored_after_schema_validation(self) -> None:
+        uploaded_file = UploadFile(
+            filename="valid-pre-survey.csv",
+            file=BytesIO(
+                b"Email,Clean Tech Knowledge,Interview Confidence,Workplace Readiness\n"
+                b"smoke-test@humanbulb.org,2,2,2\n"
+            ),
+        )
+        stored_record = {"id": "upload-1", "filename": "valid-pre-survey.csv"}
+
+        with patch.object(main.StorageClient, "upload_bytes", AsyncMock()) as upload_bytes, patch(
+            "backend.services.execute_returning", return_value=stored_record
+        ), patch("backend.services.execute"):
+            result = asyncio.run(
+                services.save_upload(
+                    self.authenticated_user(),
+                    {"id": "project-1"},
+                    "pre",
+                    uploaded_file,
+                )
+            )
+
+        self.assertEqual(result, stored_record)
+        upload_bytes.assert_awaited_once()
+
+
+if __name__ == "__main__":
+    unittest.main()

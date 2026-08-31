@@ -81,8 +81,22 @@ async def ensure_project_columns() -> None:
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    """Expose a lightweight health check for local and deployed environments."""
-    return {"status": "ok"}
+    """Confirm the configured Supabase PostgreSQL database is reachable."""
+    from .db import fetch_one
+
+    try:
+        result = fetch_one("select 1 as connected")
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database unavailable.",
+        ) from error
+    if result is None or result.get("connected") != 1:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database unavailable.",
+        )
+    return {"status": "ok", "database": "ok"}
 
 
 @app.get("/", include_in_schema=False)
@@ -379,6 +393,30 @@ async def download_report(report_id: str, user: AuthenticatedUser = Depends(auth
             "Expires": "0",
         },
     )
+
+
+@app.delete("/api/reports/{report_id}")
+async def delete_report(report_id: str, user: AuthenticatedUser = Depends(authenticate_request)) -> dict[str, str]:
+    """Delete a report and its private storage object for the signed-in organization."""
+    from .db import execute, fetch_one
+
+    report = fetch_one(
+        """
+        select storage_path
+        from reports
+        where id = %s and organization_id = %s
+        """,
+        (report_id, user.organization_id),
+    )
+    if not report:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found.")
+
+    await StorageClient(settings).delete_object(settings.supabase_bucket_reports, report["storage_path"])
+    execute(
+        "delete from reports where id = %s and organization_id = %s",
+        (report_id, user.organization_id),
+    )
+    return {"status": "ok"}
 
 
 @app.get("/login.html", include_in_schema=False)

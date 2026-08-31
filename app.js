@@ -723,10 +723,23 @@ async function renderGrantPage() {
     `).join("");
   }
   if (narrative) narrative.textContent = expandedGrantNarrative;
-  wireGrantExport();
+  updateReportActions(payload);
+  wireGrantReportActions();
 }
 
-function wireGrantExport() {
+function updateReportActions(report) {
+  const downloadButton = document.getElementById("download-pdf-button");
+  const deleteButton = document.getElementById("delete-pdf-button");
+  const hasSavedReport = Boolean(report?.report_id && report?.pdf_download_url);
+
+  if (downloadButton) {
+    downloadButton.hidden = !hasSavedReport;
+    downloadButton.href = hasSavedReport ? report.pdf_download_url : "#";
+  }
+  if (deleteButton) deleteButton.hidden = !hasSavedReport;
+}
+
+function wireGrantReportActions() {
   const exportButton = document.getElementById("export-pdf-button");
   if (exportButton && !exportButton.dataset.bound) {
     exportButton.dataset.bound = "true";
@@ -736,6 +749,12 @@ function wireGrantExport() {
       exportButton.textContent = "Generating PDF...";
       try {
         const payload = await apiFetch("/api/projects/current/grant-summary/pdf", { method: "POST", body: "{}" });
+        appState.grant = {
+          ...appState.grant,
+          report_id: payload.report_id,
+          pdf_download_url: payload.download_url,
+        };
+        updateReportActions(appState.grant);
         window.location.href = payload.download_url;
         exportButton.textContent = "Export PDF";
       } catch (error) {
@@ -746,36 +765,59 @@ function wireGrantExport() {
   }
 
   const copyButton = document.getElementById("copy-narrative-button");
-  if (!copyButton || copyButton.dataset.bound) return;
-  copyButton.dataset.bound = "true";
-  copyButton.addEventListener("click", async (event) => {
-    event.preventDefault();
+  if (copyButton && !copyButton.dataset.bound) {
+    copyButton.dataset.bound = "true";
+    copyButton.addEventListener("click", async (event) => {
+      event.preventDefault();
 
-    const grant = appState.grant || {};
-    const executive = (grant.executive_summary || "").trim();
-    const narrative = (grant.narrative || "").trim();
+      const grant = appState.grant || {};
+      const executive = (grant.executive_summary || "").trim();
+      const narrative = (grant.narrative || "").trim();
 
-    if (!executive && !narrative) {
-      setMessage("grant-copy-message", "No narrative is available to copy yet.", true);
-      return;
-    }
+      if (!executive && !narrative) {
+        setMessage("grant-copy-message", "No narrative is available to copy yet.", true);
+        return;
+      }
 
-    const text = [
-      executive ? `Executive Summary\n${executive}` : "",
-      narrative ? `Grant-Ready Narrative\n${narrative}` : ""
-    ].filter(Boolean).join("\n\n");
+      const text = [
+        executive ? `Executive Summary\n${executive}` : "",
+        narrative ? `Grant-Ready Narrative\n${narrative}` : ""
+      ].filter(Boolean).join("\n\n");
 
-    try {
-      await navigator.clipboard.writeText(text);
-      setMessage("grant-copy-message", "Narrative copied.");
-    } catch (error) {
-      setMessage(
-        "grant-copy-message",
-        "Unable to copy narrative. Check clipboard permissions and try again.",
-        true
-      );
-    }
-  });
+      try {
+        await navigator.clipboard.writeText(text);
+        setMessage("grant-copy-message", "Narrative copied.");
+      } catch (error) {
+        setMessage(
+          "grant-copy-message",
+          "Unable to copy narrative. Check clipboard permissions and try again.",
+          true
+        );
+      }
+    });
+  }
+
+  const deleteButton = document.getElementById("delete-pdf-button");
+  if (deleteButton && !deleteButton.dataset.bound) {
+    deleteButton.dataset.bound = "true";
+    deleteButton.addEventListener("click", async () => {
+      const report = appState.grant || {};
+      if (!report.report_id || !window.confirm("Delete the saved PDF report?")) return;
+
+      const original = deleteButton.textContent;
+      deleteButton.textContent = "Deleting...";
+      try {
+        await apiFetch(`/api/reports/${report.report_id}`, { method: "DELETE" });
+        appState.grant = { ...report, report_id: null, pdf_download_url: null };
+        updateReportActions(appState.grant);
+        setMessage("report-message", "Saved PDF deleted.");
+      } catch (error) {
+        setMessage("report-message", error.message, true);
+      } finally {
+        deleteButton.textContent = original;
+      }
+    });
+  }
 }
 
 function wireLoginPage() {
