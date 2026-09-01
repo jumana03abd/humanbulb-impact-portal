@@ -40,6 +40,7 @@ from .services import (
     get_or_create_current_project,
     get_saved_analysis,
     list_uploads,
+    reset_current_workspace,
     save_upload,
     set_project_status,
     update_cohort_size,
@@ -178,8 +179,9 @@ async def signup(payload: SignupRequest, response: Response) -> dict[str, str]:
 
 
 @app.post("/api/auth/logout")
-async def logout(response: Response) -> dict[str, str]:
-    """Clear the session cookies so the current staff user is signed out."""
+async def logout(response: Response, user: AuthenticatedUser = Depends(authenticate_request)) -> dict[str, str]:
+    """Clear the signed-in staff member's workspace before ending their session."""
+    await reset_current_workspace(user)
     clear_session_cookies(response)
     return {"status": "ok"}
 
@@ -370,9 +372,9 @@ async def download_report(report_id: str, user: AuthenticatedUser = Depends(auth
         """
         select storage_path, created_at
         from reports
-        where id = %s and organization_id = %s
+        where id = %s and project_id = %s and organization_id = %s
         """,
-        (report_id, user.organization_id),
+        (report_id, project["id"], user.organization_id),
     )
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found.")
@@ -397,24 +399,25 @@ async def download_report(report_id: str, user: AuthenticatedUser = Depends(auth
 
 @app.delete("/api/reports/{report_id}")
 async def delete_report(report_id: str, user: AuthenticatedUser = Depends(authenticate_request)) -> dict[str, str]:
-    """Delete a report and its private storage object for the signed-in organization."""
+    """Delete a report and its private storage object for the active workspace."""
     from .db import execute, fetch_one
 
+    project = get_or_create_current_project(user)
     report = fetch_one(
         """
         select storage_path
         from reports
-        where id = %s and organization_id = %s
+        where id = %s and project_id = %s and organization_id = %s
         """,
-        (report_id, user.organization_id),
+        (report_id, project["id"], user.organization_id),
     )
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found.")
 
     await StorageClient(settings).delete_object(settings.supabase_bucket_reports, report["storage_path"])
     execute(
-        "delete from reports where id = %s and organization_id = %s",
-        (report_id, user.organization_id),
+        "delete from reports where id = %s and project_id = %s and organization_id = %s",
+        (report_id, project["id"], user.organization_id),
     )
     return {"status": "ok"}
 
