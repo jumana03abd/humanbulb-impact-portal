@@ -57,7 +57,9 @@ class CoreApiTests(unittest.TestCase):
         async def delete_object(storage_client, bucket: str, path: str) -> None:
             deleted_objects.append((bucket, path))
 
-        with patch("backend.db.fetch_one", return_value={"storage_path": "org-1/project-1/reports/report-1.pdf"}), patch(
+        with patch("backend.main.get_or_create_current_project", return_value={"id": "project-1"}), patch(
+            "backend.db.fetch_one", return_value={"storage_path": "org-1/project-1/reports/report-1.pdf"}
+        ), patch(
             "backend.db.execute"
         ) as execute, patch.object(main.StorageClient, "delete_object", delete_object):
             response = self.client.delete("/api/reports/report-1")
@@ -69,12 +71,14 @@ class CoreApiTests(unittest.TestCase):
             [(main.settings.supabase_bucket_reports, "org-1/project-1/reports/report-1.pdf")],
         )
         execute.assert_called_once_with(
-            "delete from reports where id = %s and organization_id = %s",
-            ("report-1", "org-1"),
+            "delete from reports where id = %s and project_id = %s and organization_id = %s",
+            ("report-1", "project-1", "org-1"),
         )
 
     def test_report_deletion_rejects_reports_outside_the_organization(self) -> None:
-        with patch("backend.db.fetch_one", return_value=None), patch.object(
+        with patch("backend.main.get_or_create_current_project", return_value={"id": "project-1"}), patch(
+            "backend.db.fetch_one", return_value=None
+        ), patch.object(
             main.StorageClient, "delete_object", AsyncMock()
         ) as delete_object:
             response = self.client.delete("/api/reports/another-organization-report")
@@ -82,6 +86,51 @@ class CoreApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["detail"], "Report not found.")
         delete_object.assert_not_awaited()
+
+    def test_logout_clears_only_the_signed_in_users_workspace(self) -> None:
+        with patch("backend.main.reset_current_workspace", AsyncMock()) as reset_workspace:
+            response = self.client.post("/api/auth/logout")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"status": "ok"})
+        reset_workspace.assert_awaited_once_with(self.authenticated_user())
+
+    def test_workspace_reset_removes_user_storage_and_project(self) -> None:
+        user = self.authenticated_user()
+        uploads = [
+            {
+                "storage_path": "org-1/project-1/photos/archive.zip",
+                "parsed_summary": {
+                    "featured_images": [
+                        {"storage_path": "org-1/project-1/photos/featured-1.jpg"},
+                    ]
+                },
+            }
+        ]
+        reports = [{"storage_path": "org-1/project-1/reports/report-1.pdf"}]
+
+        with patch("backend.services.find_current_workspace", return_value={"id": "project-1"}), patch(
+            "backend.services.fetch_all", side_effect=[uploads, reports]
+        ), patch.object(services.StorageClient, "delete_object", AsyncMock()) as delete_object, patch(
+            "backend.services.execute"
+        ) as execute:
+            asyncio.run(services.reset_current_workspace(user))
+
+        self.assertEqual(
+            delete_object.await_args_list,
+            [
+                unittest.mock.call(main.settings.supabase_bucket_uploads, "org-1/project-1/photos/archive.zip"),
+                unittest.mock.call(main.settings.supabase_bucket_uploads, "org-1/project-1/photos/featured-1.jpg"),
+                unittest.mock.call(main.settings.supabase_bucket_reports, "org-1/project-1/reports/report-1.pdf"),
+            ],
+        )
+        execute.assert_called_once_with(
+            """
+        delete from projects
+        where id = %s and organization_id = %s and workspace_owner_user_id = %s
+        """,
+            ("project-1", "org-1", "user-1"),
+        )
 
     def test_invalid_upload_is_rejected_before_storage(self) -> None:
         uploaded_file = UploadFile(

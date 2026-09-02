@@ -148,9 +148,9 @@ async def extract_zip_featured_images(
     return summary
 
 
-def get_or_create_current_project(user: AuthenticatedUser) -> dict[str, Any]:
-    """Return a staff member's private workspace or create a blank cohort shell."""
-    project = fetch_one(
+def find_current_workspace(user: AuthenticatedUser) -> dict[str, Any] | None:
+    """Return the signed-in staff member's private workspace, when it exists."""
+    return fetch_one(
         """
         select id, organization_id, name, cohort_year, cohort_size, reporting_period, status, created_at, updated_at
         from projects
@@ -161,6 +161,11 @@ def get_or_create_current_project(user: AuthenticatedUser) -> dict[str, Any]:
         """,
         (user.organization_id, user.user_id),
     )
+
+
+def get_or_create_current_project(user: AuthenticatedUser) -> dict[str, Any]:
+    """Return a staff member's private workspace or create a blank cohort shell."""
+    project = find_current_workspace(user)
     if project:
         return project
 
@@ -184,6 +189,47 @@ def get_or_create_current_project(user: AuthenticatedUser) -> dict[str, Any]:
             "",
             "draft",
         ),
+    )
+
+
+async def reset_current_workspace(user: AuthenticatedUser) -> None:
+    """Remove only the signed-in staff member's workspace and private storage objects."""
+    project = find_current_workspace(user)
+    if not project:
+        return
+
+    uploads = fetch_all(
+        """
+        select storage_path, parsed_summary
+        from project_uploads
+        where project_id = %s and organization_id = %s
+        """,
+        (project["id"], user.organization_id),
+    )
+    reports = fetch_all(
+        """
+        select storage_path
+        from reports
+        where project_id = %s and organization_id = %s
+        """,
+        (project["id"], user.organization_id),
+    )
+    settings = get_settings()
+    storage = StorageClient(settings)
+
+    for upload in uploads:
+        await storage.delete_object(settings.supabase_bucket_uploads, upload["storage_path"])
+        for asset_path in collect_photo_asset_paths(upload.get("parsed_summary"), upload["storage_path"]):
+            await storage.delete_object(settings.supabase_bucket_uploads, asset_path)
+    for report in reports:
+        await storage.delete_object(settings.supabase_bucket_reports, report["storage_path"])
+
+    execute(
+        """
+        delete from projects
+        where id = %s and organization_id = %s and workspace_owner_user_id = %s
+        """,
+        (project["id"], user.organization_id, user.user_id),
     )
 
 

@@ -117,7 +117,7 @@ The backend accepts common naming variations for each required field, but every 
 
 ## Production Deployment
 
-The repository includes a `Dockerfile` for any container host. It listens on the host-provided `PORT` and falls back to `8000` locally.
+The repository includes a `Dockerfile` for any container host. It listens on the host-provided `PORT` and falls back to `8000` locally. The root `.python-version` pins native Python hosts such as Render to Python `3.12.10`, matching the tested local and CI runtime.
 
 1. Build and test the image locally:
 
