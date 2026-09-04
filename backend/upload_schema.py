@@ -73,6 +73,9 @@ FIELD_DEFINITIONS: dict[str, UploadField] = {
             "weekly reflection",
             "how are you feeling",
             "what did you learn",
+            "what is one new thing you learned this week",
+            "what challenge did you face, and how did you overcome it",
+            "what project(s) did you work on",
             "what support do you need",
             "share your thoughts",
         ),
@@ -109,6 +112,8 @@ FIELD_DEFINITIONS: dict[str, UploadField] = {
             "resume confidence",
             "resume completion",
             "resume status",
+            "resume url",
+            "resume link",
             "has resume",
         ),
     ),
@@ -148,6 +153,8 @@ FIELD_DEFINITIONS: dict[str, UploadField] = {
             "linkedin",
             "linkedin profile",
             "linkedin profile complete",
+            "linkedin url",
+            "linkedin link",
         ),
     ),
     "program_completion": UploadField(
@@ -283,9 +290,9 @@ SCHEMA_DEFINITIONS: dict[str, UploadSchema] = {
         component="weekly",
         required_fields=(
             "participant_identifier",
-            "week",
             "reflection_text",
         ),
+        optional_fields=("week",),
     ),
     "deliverables": UploadSchema(
         component="deliverables",

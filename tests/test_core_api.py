@@ -7,6 +7,8 @@ import unittest
 from io import BytesIO, StringIO
 from unittest.mock import AsyncMock, patch
 
+import pandas as pd
+
 os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
 os.environ.setdefault("SUPABASE_ANON_KEY", "test-anon-key")
 os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key")
@@ -19,6 +21,7 @@ import backend.main as main
 import backend.services as services
 from backend.analysis import POST_PROGRAM_RATING_DEFINITIONS, UploadDataset, build_analysis, read_spreadsheet
 from backend.auth import AuthenticatedUser
+from backend.upload_schema import validate_component_dataframe
 
 
 def post_program_survey_csv() -> bytes:
@@ -211,6 +214,39 @@ class CoreApiTests(unittest.TestCase):
         self.assertEqual(len(analysis["before_after"]), len(POST_PROGRAM_RATING_DEFINITIONS))
         self.assertEqual(analysis["metrics"][1]["value"], "100%")
         self.assertEqual(analysis["metrics"][4]["value"], "100%")
+
+    def test_weekly_checkin_accepts_question_style_google_form_headers(self) -> None:
+        dataframe = pd.DataFrame(
+            {
+                "Timestamp": ["2026-09-03 10:00:00"],
+                "Name ": ["Sample Intern"],
+                "What project(s) did you work on?": ["Community research"],
+                "What is one new thing you learned this week?": ["How to prepare survey findings"],
+                " What skill improved the most?": ["Project management"],
+                "What challenge did you face, and how did you overcome it?": ["Scheduling, solved with a plan"],
+            }
+        )
+
+        validation = validate_component_dataframe("weekly", "Weekly Check-In Surveys", dataframe)
+
+        self.assertTrue(validation["valid"])
+
+    def test_resume_tracker_accepts_title_rows_and_url_columns(self) -> None:
+        raw_rows = [
+            ["Green Careers Launchpad Resume + LinkedIn Tracker", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", ""],
+            ["", "", "", "", "", "", ""],
+            ["Intern Name", "LinkedIn URL", "Cover Letter URL", "Resume URL", "Staff Verified (Resume)", "Verified By", "Verification Date"],
+            ["Sample Intern", "https://linkedin.com/in/sample", "", "https://example.org/resume", True, "Staff", "2026-09-03"],
+        ]
+        workbook = BytesIO()
+        pd.DataFrame(raw_rows).to_excel(workbook, index=False, header=False)
+
+        dataframe = read_spreadsheet("resume-linkedin.xlsx", workbook.getvalue())
+        validation = validate_component_dataframe("resume-linkedin", "Resume & LinkedIn Completion Tracker", dataframe)
+
+        self.assertEqual(list(dataframe.columns)[:4], ["Intern Name", "LinkedIn URL", "Cover Letter URL", "Resume URL"])
+        self.assertTrue(validation["valid"])
 
 
 if __name__ == "__main__":

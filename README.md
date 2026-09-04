@@ -99,7 +99,8 @@ The portal now validates spreadsheet uploads against explicit schema rules befor
   - Required: participant identifier plus paired before/after ratings for professional communication, teamwork, leadership, public speaking, networking, time management, project management, problem-solving, initiative, seeking help, workplace expectations, workforce readiness, and clean technology/sustainability
   - Optional: free-response survey fields are used as qualitative evidence
 - `Weekly Check-In Surveys`
-  - Required: participant identifier, week/check-in marker, reflection or response text
+  - Required: participant identifier and reflection or response text
+  - Optional: week/check-in marker; Google Form response timestamps are accepted without one
 - `Deliverables Tracker`
   - Required: intern/participant name, project or initiative, completion/status
 - `Resume & LinkedIn Completion Tracker`
