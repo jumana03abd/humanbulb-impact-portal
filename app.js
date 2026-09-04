@@ -253,8 +253,8 @@ function updateSidebarCopy() {
   }
 
   if (document.body.dataset.page === "analytics" && appState.analytics) {
-    sidebarStrong.textContent = `${appState.analytics.matched_response_count} matched responses`;
-    sidebarParagraph.textContent = "Week 1 and Week 8 survey comparisons only include participants with records in both uploads.";
+    sidebarStrong.textContent = `${appState.analytics.matched_response_count} survey responses`;
+    sidebarParagraph.textContent = "Before/after comparisons use each participant's paired self-ratings from the post-program survey.";
   }
 }
 
@@ -602,7 +602,7 @@ async function renderAnalyticsPage() {
   renderGroupedHorizontalChart("before-after-chart", payload.beforeAfter, {
     max: 5,
     colors: ["#FCE68A", "#2F8F5B"],
-    labels: ["Week 1", "Week 8"]
+    labels: ["Before internship", "After internship"]
   });
   const deltaList = document.getElementById("delta-list");
   if (deltaList) {
@@ -611,15 +611,15 @@ async function renderAnalyticsPage() {
         <div class="delta-row">
           <div class="delta-copy">
             <strong>${item.label}</strong>
-            <span>Percent change from Week 1 baseline</span>
+            <span>Percent change from the before-internship rating</span>
           </div>
           <span class="delta-value">+${item.delta}%</span>
         </div>
       `).join("")
       : `
         <div class="chart-empty-state compact">
-          <strong>Awaiting Week 8 post-survey upload</strong>
-          <p>Improvement percentages will appear here after the post-survey is uploaded and matched to Week 1 participant records.</p>
+          <strong>Awaiting post-program survey upload</strong>
+          <p>Improvement percentages will appear after the paired before/after survey is uploaded.</p>
         </div>
       `;
   }
@@ -946,14 +946,14 @@ function wireLoginPage() {
 }
 
 function renderGroupedHorizontalChart(targetId, items, options) {
-  // Draw the paired Week 1 vs Week 8 horizontal comparison bars in SVG.
+  // Draw the paired before/after horizontal comparison bars in SVG.
   const el = document.getElementById(targetId);
   if (!el) return;
   if (!items.length) {
     renderChartEmptyState(
       targetId,
-      "Awaiting Week 8 post-survey data",
-      "This score comparison will appear once the Week 8 post-survey is uploaded and matched to the Week 1 participant responses."
+      "Awaiting post-program survey data",
+      "This score comparison will appear once the post-program survey with paired before/after ratings is uploaded."
     );
     return;
   }
@@ -996,8 +996,8 @@ function renderStackedBars(targetId, items) {
   if (!items.length) {
     renderChartEmptyState(
       targetId,
-      "Awaiting matched confidence responses",
-      "The confidence distribution comparison will populate after Week 8 confidence responses are available for participants already found in Week 1."
+      "Awaiting paired networking responses",
+      "The networking distribution comparison will populate after the post-program survey is uploaded."
     );
     return;
   }
@@ -1040,8 +1040,8 @@ function renderStackedBars(targetId, items) {
 
   el.innerHTML = `
     <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Confidence distribution stacked chart">
-      ${buildStack(startX, "Week 1", "before")}
-      ${buildStack(secondX, "Week 8", "after")}
+      ${buildStack(startX, "Before internship", "before")}
+      ${buildStack(secondX, "After internship", "after")}
       ${legend}
     </svg>
   `;

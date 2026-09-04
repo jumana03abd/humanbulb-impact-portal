@@ -14,13 +14,13 @@ def deterministic_narrative(analysis: dict[str, Any]) -> dict[str, str]:
     executive = (
         f"HUMANBULB's Green Careers Launchpad served {summary['interns_served']} interns and "
         f"showed measurable growth across connected program data, including {summary['clean_tech_growth']} "
-        f"growth in clean tech knowledge and {summary['interview_confidence_growth']} growth in interview confidence."
+        f"growth in clean tech understanding and {summary['career_confidence_growth']} growth in career confidence."
     )
     narrative = (
         f"Based on uploaded surveys, trackers, and testimonial responses, the cohort demonstrated "
         f"{summary['average_skill_growth']} average skill growth, {summary['resume_linkedin_completion']} "
         f"career-material completion, and {summary['projects_completed']} completed project deliverables. "
-        "These findings are drawn directly from connected records and matched survey responses."
+        "These findings are drawn directly from connected records and paired before/after survey responses."
     )
     return {
         "executive_summary": executive,

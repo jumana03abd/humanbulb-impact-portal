@@ -7,8 +7,10 @@ from typing import Any
 
 from backend.analysis import (
     OUTCOME_DEFINITIONS,
+    POST_PROGRAM_RATING_DEFINITIONS,
     find_metric_column,
     find_participant_key,
+    find_post_program_survey_outcomes,
     normalize_name,
 )
 
@@ -54,6 +56,11 @@ FIELD_DEFINITIONS: dict[str, UploadField] = {
             "week number",
             "program week",
         ),
+    ),
+    "post_program_survey_ratings": UploadField(
+        key="post_program_survey_ratings",
+        label="Before/after ratings for all 13 post-program survey skills",
+        aliases=(),
     ),
     "reflection_text": UploadField(
         key="reflection_text",
@@ -167,6 +174,7 @@ FIELD_DEFINITIONS: dict[str, UploadField] = {
             "story",
             "what did this program mean to you",
             "what was the most valuable part of this experience",
+            "what was the most valuable part of the internship for you",
             "what was the most valuable part of the program",
             "share a reflection",
             "share your reflection",
@@ -266,21 +274,10 @@ FIELD_DEFINITIONS: dict[str, UploadField] = {
 
 
 SCHEMA_DEFINITIONS: dict[str, UploadSchema] = {
-    "pre": UploadSchema(
-        component="pre",
-        required_fields=(
-            "participant_identifier",
-            "clean_tech_knowledge",
-            "interview_confidence",
-            "workplace_readiness",
-        ),
-        optional_fields=(
-            "resume_readiness",
-            "career_clarity",
-            "linkedin_completion",
-            "program_completion",
-            "testimonial_text",
-        ),
+    "post-program": UploadSchema(
+        component="post-program",
+        required_fields=("participant_identifier", "post_program_survey_ratings"),
+        optional_fields=("testimonial_text",),
     ),
     "weekly": UploadSchema(
         component="weekly",
@@ -288,22 +285,6 @@ SCHEMA_DEFINITIONS: dict[str, UploadSchema] = {
             "participant_identifier",
             "week",
             "reflection_text",
-        ),
-    ),
-    "post": UploadSchema(
-        component="post",
-        required_fields=(
-            "participant_identifier",
-            "clean_tech_knowledge",
-            "interview_confidence",
-            "workplace_readiness",
-        ),
-        optional_fields=(
-            "resume_readiness",
-            "career_clarity",
-            "linkedin_completion",
-            "program_completion",
-            "testimonial_text",
         ),
     ),
     "deliverables": UploadSchema(
@@ -366,6 +347,11 @@ def _resolve_required_field(dataframe: Any, field_key: str) -> str | None:
         if participant_column:
             return participant_column
 
+    if field_key == "post_program_survey_ratings":
+        outcome_pairs = find_post_program_survey_outcomes(dataframe)
+        if len(outcome_pairs) == len(POST_PROGRAM_RATING_DEFINITIONS):
+            return "paired before/after skill ratings"
+
     outcome_definition = OUTCOME_DEFINITIONS.get(field_key)
     if outcome_definition:
         metric_column = find_metric_column(dataframe, outcome_definition)
@@ -406,6 +392,20 @@ def validate_component_dataframe(component: str, component_name: str, dataframe:
     missing_required_fields: list[str] = []
 
     for field_key in schema.required_fields:
+        if field_key == "post_program_survey_ratings":
+            outcome_pairs = find_post_program_survey_outcomes(dataframe)
+            missing_outcomes = [
+                label
+                for key, label in POST_PROGRAM_RATING_DEFINITIONS.items()
+                if key not in outcome_pairs
+            ]
+            if missing_outcomes:
+                missing_required_fields.append(
+                    f"Before/after ratings for: {', '.join(missing_outcomes)}"
+                )
+            else:
+                matched_required_fields[field_key] = "paired before/after skill ratings"
+            continue
         matched_column = _resolve_required_field(dataframe, field_key)
         if matched_column:
             matched_required_fields[field_key] = matched_column
