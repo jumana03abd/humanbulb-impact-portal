@@ -95,14 +95,11 @@ GitHub Actions runs the same regression suite and JavaScript syntax check on eve
 
 The portal now validates spreadsheet uploads against explicit schema rules before analysis begins.
 
-- `Week 1 Pre-Survey`
-  - Required: participant identifier, clean tech knowledge, interview confidence, workplace readiness
-  - Optional: resume readiness, career clarity, LinkedIn completion, program completion, testimonial text
+- `Post-Program Survey`
+  - Required: participant identifier plus paired before/after ratings for professional communication, teamwork, leadership, public speaking, networking, time management, project management, problem-solving, initiative, seeking help, workplace expectations, workforce readiness, and clean technology/sustainability
+  - Optional: free-response survey fields are used as qualitative evidence
 - `Weekly Check-In Surveys`
   - Required: participant identifier, week/check-in marker, reflection or response text
-- `Week 8 Post-Survey`
-  - Required: participant identifier, clean tech knowledge, interview confidence, workplace readiness
-  - Optional: resume readiness, career clarity, LinkedIn completion, program completion, testimonial text
 - `Deliverables Tracker`
   - Required: intern/participant name, project or initiative, completion/status
 - `Resume & LinkedIn Completion Tracker`

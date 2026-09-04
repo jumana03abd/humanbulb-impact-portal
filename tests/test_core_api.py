@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import os
 import unittest
-from io import BytesIO
+from io import BytesIO, StringIO
 from unittest.mock import AsyncMock, patch
 
 os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
@@ -16,7 +17,22 @@ from fastapi.testclient import TestClient
 
 import backend.main as main
 import backend.services as services
+from backend.analysis import POST_PROGRAM_RATING_DEFINITIONS, UploadDataset, build_analysis, read_spreadsheet
 from backend.auth import AuthenticatedUser
+
+
+def post_program_survey_csv() -> bytes:
+    """Build a representative export using the exact HUMANBULB survey question headers."""
+    headers = ["Name (First Last)"]
+    values = ["Sample Intern"]
+    for survey_label in POST_PROGRAM_RATING_DEFINITIONS.values():
+        headers.append(f"How would you rate yourself BEFORE the internship in the following areas? [{survey_label}]")
+        values.append("2 = Low")
+        headers.append(f"How would you rate yourself AFTER the internship in the following areas? [{survey_label}]")
+        values.append("4 = High")
+    buffer = StringIO()
+    csv.writer(buffer).writerows([headers, values])
+    return buffer.getvalue().encode("utf-8")
 
 
 class CoreApiTests(unittest.TestCase):
@@ -144,7 +160,7 @@ class CoreApiTests(unittest.TestCase):
                     services.save_upload(
                         self.authenticated_user(),
                         {"id": "project-1"},
-                        "pre",
+                        "post-program",
                         uploaded_file,
                     )
                 )
@@ -155,11 +171,8 @@ class CoreApiTests(unittest.TestCase):
 
     def test_valid_upload_is_stored_after_schema_validation(self) -> None:
         uploaded_file = UploadFile(
-            filename="valid-pre-survey.csv",
-            file=BytesIO(
-                b"Email,Clean Tech Knowledge,Interview Confidence,Workplace Readiness\n"
-                b"smoke-test@humanbulb.org,2,2,2\n"
-            ),
+            filename="post-program-survey.csv",
+            file=BytesIO(post_program_survey_csv()),
         )
         stored_record = {"id": "upload-1", "filename": "valid-pre-survey.csv"}
 
@@ -170,13 +183,34 @@ class CoreApiTests(unittest.TestCase):
                 services.save_upload(
                     self.authenticated_user(),
                     {"id": "project-1"},
-                    "pre",
+                    "post-program",
                     uploaded_file,
                 )
             )
 
         self.assertEqual(result, stored_record)
         upload_bytes.assert_awaited_once()
+
+    def test_post_program_survey_produces_paired_before_after_results(self) -> None:
+        dataframe = read_spreadsheet("post-program-survey.csv", post_program_survey_csv())
+        analysis = build_analysis(
+            {"cohort_size": 0},
+            [
+                UploadDataset(
+                    component="post-program",
+                    filename="post-program-survey.csv",
+                    dataframe=dataframe,
+                    content_type="text/csv",
+                    row_count=1,
+                    summary={},
+                )
+            ],
+        )
+
+        self.assertEqual(analysis["summary"]["matched_response_count"], 1)
+        self.assertEqual(len(analysis["before_after"]), len(POST_PROGRAM_RATING_DEFINITIONS))
+        self.assertEqual(analysis["metrics"][1]["value"], "100%")
+        self.assertEqual(analysis["metrics"][4]["value"], "100%")
 
 
 if __name__ == "__main__":

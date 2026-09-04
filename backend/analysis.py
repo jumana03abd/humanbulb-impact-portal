@@ -88,37 +88,66 @@ OUTCOME_DEFINITIONS = {
     ],
 }
 
+POST_PROGRAM_RATING_DEFINITIONS = {
+    "professional_communication": "Professional Communication",
+    "teamwork_skills": "Teamwork and Collaboration",
+    "leadership_skills": "Leadership",
+    "public_speaking_skills": "Public Speaking and Presentation",
+    "networking_skills": "Networking with Professionals",
+    "time_management_skills": "Time Management",
+    "project_management_skills": "Project Management",
+    "problem_solving_skills": "Problem-Solving",
+    "taking_initiative": "Taking Initiative",
+    "seeking_help": "Asking Questions and Seeking Help",
+    "workplace_expectations": "Understanding Workplace Expectations",
+    "workforce_readiness": "Workforce Readiness",
+    "clean_tech_knowledge": "Understanding of Clean Technology & Sustainability",
+}
+
 OUTCOME_LABELS = {
-    "clean_tech_knowledge": "Familiarity with clean tech careers",
-    "interview_confidence": "Confidence participating in a job interview",
-    "communication_skills": "Communication skills",
-    "public_speaking_skills": "Public speaking skills",
-    "project_management_skills": "Project management skills",
-    "teamwork_skills": "Teamwork skills",
-    "research_skills": "Research skills",
-    "professional_intro_confidence": "Confidence introducing yourself to a professional",
-    "leadership_confidence": "Confidence taking initiative or leading a group",
-    "workplace_readiness": "Familiarity with professional workplace expectations",
+    "professional_communication": "Professional communication",
+    "teamwork_skills": "Teamwork and collaboration",
+    "leadership_skills": "Leadership",
+    "public_speaking_skills": "Public speaking and presentation",
+    "networking_skills": "Networking with professionals",
+    "time_management_skills": "Time management",
+    "project_management_skills": "Project management",
+    "problem_solving_skills": "Problem-solving",
+    "taking_initiative": "Taking initiative",
+    "seeking_help": "Asking questions and seeking help",
+    "workplace_expectations": "Understanding workplace expectations",
+    "workforce_readiness": "Workforce readiness",
+    "clean_tech_knowledge": "Clean technology and sustainability understanding",
 }
 
 WORKPLACE_READINESS_KEYS = [
-    "communication_skills",
+    "professional_communication",
     "public_speaking_skills",
     "project_management_skills",
     "teamwork_skills",
-    "research_skills",
-    "workplace_readiness",
-    "leadership_confidence",
+    "leadership_skills",
+    "time_management_skills",
+    "problem_solving_skills",
+    "taking_initiative",
+    "workplace_expectations",
+    "workforce_readiness",
 ]
 
 CAREER_CONFIDENCE_KEYS = [
-    "professional_intro_confidence",
-    "interview_confidence",
-    "leadership_confidence",
+    "networking_skills",
+    "leadership_skills",
+    "public_speaking_skills",
+    "professional_communication",
 ]
 
 HEADER_HINTS = (
+    "timestamp",
     "name",
+    "before",
+    "after",
+    "internship",
+    "professional",
+    "career",
     "week",
     "project",
     "deliverable",
@@ -245,6 +274,8 @@ def find_participant_key(df: pd.DataFrame) -> str | None:
         "fullname",
         "participantname",
         "internname",
+        "namefirstlast",
+        "firstlastname",
         "name",
     ]:
         if candidate in normalized:
@@ -308,6 +339,10 @@ def collect_quotes(df: pd.DataFrame) -> list[str]:
                 "story",
                 "learned",
                 "improved",
+                "valuable",
+                "grown",
+                "career goals",
+                "wish",
                 "challenge",
                 "future",
                 "accomplishment",
@@ -354,17 +389,35 @@ def _build_outcome_lookup(df: pd.DataFrame) -> dict[str, str]:
     }
 
 
-def _matched_dataframe(pre_df: pd.DataFrame, post_df: pd.DataFrame) -> pd.DataFrame:
-    """Join pre- and post-survey rows so growth is only measured on matched participants."""
-    if pre_df.empty or post_df.empty or "_participant_key" not in pre_df or "_participant_key" not in post_df:
-        return pd.DataFrame()
-    return pre_df.merge(post_df, on="_participant_key", suffixes=("_pre", "_post"))
+def find_post_program_survey_outcomes(df: pd.DataFrame) -> dict[str, tuple[str, str]]:
+    """Locate paired before/after rating columns in the HUMANBULB post-program survey."""
+    outcomes: dict[str, tuple[str, str]] = {}
+    normalized_headers = [(str(column), normalize_name(str(column))) for column in df.columns]
+    before_marker = normalize_name("before the internship")
+    after_marker = normalize_name("after the internship")
+
+    for key, survey_label in POST_PROGRAM_RATING_DEFINITIONS.items():
+        normalized_label = normalize_name(survey_label)
+        before_column = next(
+            (column for column, header in normalized_headers if before_marker in header and normalized_label in header),
+            None,
+        )
+        after_column = next(
+            (column for column, header in normalized_headers if after_marker in header and normalized_label in header),
+            None,
+        )
+        if before_column and after_column:
+            outcomes[key] = (before_column, after_column)
+    return outcomes
 
 
-def _outcome_delta(matched_df: pd.DataFrame, pre_col: str, post_col: str) -> tuple[float | None, float | None, float | None, float | None]:
-    """Calculate baseline, endline, and relative change for one matched survey outcome."""
-    pre_scores = matched_df[f"{pre_col}_pre"].map(parse_likert)
-    post_scores = matched_df[f"{post_col}_post"].map(parse_likert)
+def _paired_outcome_delta(survey_df: pd.DataFrame, before_col: str, after_col: str) -> tuple[float | None, float | None, float | None, float | None]:
+    """Calculate before/after change from paired ratings in one participant survey row."""
+    pre_scores = survey_df[before_col].map(parse_likert)
+    post_scores = survey_df[after_col].map(parse_likert)
+    mask = pre_scores.notna() & post_scores.notna()
+    pre_scores = pre_scores[mask]
+    post_scores = post_scores[mask]
     pre_avg = safe_mean(pre_scores)
     post_avg = safe_mean(post_scores)
     if pre_avg is None or post_avg is None:
@@ -375,27 +428,27 @@ def _outcome_delta(matched_df: pd.DataFrame, pre_col: str, post_col: str) -> tup
     return pre_avg, post_avg, absolute_change, percent_change if percent_change is not None else None
 
 
-def _improved_rate(matched_df: pd.DataFrame, pre_col: str, post_col: str) -> float | None:
-    """Measure the share of matched participants whose score increased for one outcome."""
-    pre_scores = matched_df[f"{pre_col}_pre"].map(parse_likert)
-    post_scores = matched_df[f"{post_col}_post"].map(parse_likert)
+def _paired_improved_rate(survey_df: pd.DataFrame, before_col: str, after_col: str) -> float | None:
+    """Measure the share of respondents whose paired rating increased for one outcome."""
+    pre_scores = survey_df[before_col].map(parse_likert)
+    post_scores = survey_df[after_col].map(parse_likert)
     mask = pre_scores.notna() & post_scores.notna()
     if not mask.any():
         return None
     return float(((post_scores[mask] - pre_scores[mask]) > 0).mean() * 100)
 
 
-def _composite_frame(matched_df: pd.DataFrame, pre_lookup: dict[str, str], post_lookup: dict[str, str], keys: list[str]) -> tuple[pd.Series | None, pd.Series | None]:
-    """Build pre/post composite score series from several related survey items."""
+def _paired_composite_frame(survey_df: pd.DataFrame, outcome_pairs: dict[str, tuple[str, str]], keys: list[str]) -> tuple[pd.Series | None, pd.Series | None]:
+    """Build before/after composite score series from related paired survey items."""
     pre_columns: list[pd.Series] = []
     post_columns: list[pd.Series] = []
     for key in keys:
-        pre_col = pre_lookup.get(key)
-        post_col = post_lookup.get(key)
-        if not pre_col or not post_col:
+        pair = outcome_pairs.get(key)
+        if not pair:
             continue
-        pre_columns.append(matched_df[f"{pre_col}_pre"].map(parse_likert))
-        post_columns.append(matched_df[f"{post_col}_post"].map(parse_likert))
+        before_col, after_col = pair
+        pre_columns.append(survey_df[before_col].map(parse_likert))
+        post_columns.append(survey_df[after_col].map(parse_likert))
     if not pre_columns or not post_columns:
         return None, None
     pre_scores = pd.concat(pre_columns, axis=1).mean(axis=1, skipna=True)
@@ -446,22 +499,19 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
     for upload in uploads:
         by_component.setdefault(upload.component, []).append(upload)
 
-    pre_df = pd.concat([attach_participant_key(u.dataframe) for u in by_component.get("pre", []) if u.dataframe is not None], ignore_index=True) if by_component.get("pre") else pd.DataFrame()
-    post_df = pd.concat([attach_participant_key(u.dataframe) for u in by_component.get("post", []) if u.dataframe is not None], ignore_index=True) if by_component.get("post") else pd.DataFrame()
+    post_program_df = pd.concat([attach_participant_key(u.dataframe) for u in by_component.get("post-program", []) if u.dataframe is not None], ignore_index=True) if by_component.get("post-program") else pd.DataFrame()
     weekly_df = pd.concat([attach_participant_key(u.dataframe) for u in by_component.get("weekly", []) if u.dataframe is not None], ignore_index=True) if by_component.get("weekly") else pd.DataFrame()
     resume_df = pd.concat([attach_participant_key(u.dataframe) for u in by_component.get("resume-linkedin", []) if u.dataframe is not None], ignore_index=True) if by_component.get("resume-linkedin") else pd.DataFrame()
     deliverables_df = pd.concat([attach_participant_key(u.dataframe) for u in by_component.get("deliverables", []) if u.dataframe is not None], ignore_index=True) if by_component.get("deliverables") else pd.DataFrame()
     testimonials_df = pd.concat([attach_participant_key(u.dataframe) for u in by_component.get("testimonials", []) if u.dataframe is not None], ignore_index=True) if by_component.get("testimonials") else pd.DataFrame()
 
-    pre_lookup = _build_outcome_lookup(pre_df) if not pre_df.empty else {}
-    post_lookup = _build_outcome_lookup(post_df) if not post_df.empty else {}
-    matched = _matched_dataframe(pre_df, post_df)
-    matched_count = len(matched)
+    outcome_pairs = find_post_program_survey_outcomes(post_program_df) if not post_program_df.empty else {}
+    matched_count = _unique_participants(post_program_df)
 
     cohort_size = int(project.get("cohort_size") or 0)
     participant_counts = [
         _unique_participants(df)
-        for df in [pre_df, post_df, weekly_df, resume_df, deliverables_df, testimonials_df]
+        for df in [post_program_df, weekly_df, resume_df, deliverables_df, testimonials_df]
     ]
     interns_served = cohort_size or max(participant_counts or [0])
 
@@ -469,27 +519,26 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
     deltas: list[dict[str, Any]] = []
     improved_rates: dict[str, float | None] = {}
 
-    if not matched.empty:
+    if not post_program_df.empty:
         for key, label in OUTCOME_LABELS.items():
-            pre_col = pre_lookup.get(key)
-            post_col = post_lookup.get(key)
-            if not pre_col or not post_col:
+            pair = outcome_pairs.get(key)
+            if not pair:
                 continue
-            pre_avg, post_avg, _absolute_change, percent_change = _outcome_delta(matched, pre_col, post_col)
+            before_col, after_col = pair
+            pre_avg, post_avg, _absolute_change, percent_change = _paired_outcome_delta(post_program_df, before_col, after_col)
             if pre_avg is None or post_avg is None:
                 continue
             before_after.append({"label": label, "before": round(pre_avg, 1), "after": round(post_avg, 1)})
             deltas.append({"label": label, "delta": round(percent_change or 0)})
-            improved_rates[key] = _improved_rate(matched, pre_col, post_col)
+            improved_rates[key] = _paired_improved_rate(post_program_df, before_col, after_col)
 
-    workplace_pre, workplace_post = _composite_frame(matched, pre_lookup, post_lookup, WORKPLACE_READINESS_KEYS)
+    workplace_pre, workplace_post = _paired_composite_frame(post_program_df, outcome_pairs, WORKPLACE_READINESS_KEYS)
     workplace_improved_rate, workplace_mean_delta = _composite_improvement(workplace_pre, workplace_post)
 
-    confidence_pre, confidence_post = _composite_frame(matched, pre_lookup, post_lookup, CAREER_CONFIDENCE_KEYS)
+    confidence_pre, confidence_post = _paired_composite_frame(post_program_df, outcome_pairs, CAREER_CONFIDENCE_KEYS)
     confidence_improved_rate, confidence_mean_delta = _composite_improvement(confidence_pre, confidence_post)
 
     clean_tech_improved_rate = improved_rates.get("clean_tech_knowledge")
-    interview_improved_rate = improved_rates.get("interview_confidence")
 
     columns = {normalize_name(str(col)): str(col) for col in resume_df.columns} if not resume_df.empty else {}
     linkedin_col = next((col for key, col in columns.items() if "linkedinurl" in key), None)
@@ -565,11 +614,11 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
     selected_quote = quote_pool[0] if quote_pool else "Participants reported meaningful growth, stronger confidence, and increased exposure to career pathways."
 
     distribution = []
-    if not matched.empty and pre_lookup.get("interview_confidence") and post_lookup.get("interview_confidence"):
-        pre_col = pre_lookup["interview_confidence"]
-        post_col = post_lookup["interview_confidence"]
-        pre_dist = {item["label"]: item["count"] for item in compute_distribution(matched[f"{pre_col}_pre"].map(parse_likert))}
-        post_dist = {item["label"]: item["count"] for item in compute_distribution(matched[f"{post_col}_post"].map(parse_likert))}
+    networking_pair = outcome_pairs.get("networking_skills")
+    if networking_pair:
+        before_col, after_col = networking_pair
+        pre_dist = {item["label"]: item["count"] for item in compute_distribution(post_program_df[before_col].map(parse_likert))}
+        post_dist = {item["label"]: item["count"] for item in compute_distribution(post_program_df[after_col].map(parse_likert))}
         distribution = [
             {"label": label, "before": pre_dist.get(label, 0), "after": post_dist.get(label, 0)}
             for label in ["Not confident", "Somewhat confident", "Confident"]
@@ -579,10 +628,10 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
 
     metrics = [
         {"label": "Interns served", "value": str(interns_served or 0), "note": "Cohort size or the largest connected participant set."},
-        {"label": "Clean tech career awareness improved", "value": percent_string(clean_tech_improved_rate), "note": "Based on the survey item: How familiar are you with clean tech careers?"}, 
-        {"label": "Workplace readiness improved", "value": percent_string(workplace_improved_rate), "note": "Composite of communication, public speaking, project management, teamwork, research, leadership, and workplace expectations."},
+        {"label": "Clean tech understanding improved", "value": percent_string(clean_tech_improved_rate), "note": "Based on paired before/after understanding of clean technology and sustainability ratings."},
+        {"label": "Workplace readiness improved", "value": percent_string(workplace_improved_rate), "note": "Composite of the paired before/after professional skill ratings in the post-program survey."},
         {"label": "Resume + LinkedIn completed", "value": percent_string(both_completion_rate), "note": "Participants with both a resume URL and LinkedIn URL in the tracker."},
-        {"label": "Job interview confidence improved", "value": percent_string(interview_improved_rate), "note": "Based on the survey item: How confident are you participating in a job interview?"},
+        {"label": "Career confidence improved", "value": percent_string(confidence_improved_rate), "note": "Composite of paired networking, leadership, presentation, and communication ratings."},
         {"label": "Deliverables logged", "value": str(deliverables_total), "note": "Total rows in the deliverables tracker."},
     ]
 
@@ -603,7 +652,7 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
         },
         {
             "title": "Clean Tech Awareness",
-            "description": "Participants reporting increased awareness of clean tech career pathways.",
+            "description": "Participants reporting increased understanding of clean technology and sustainability.",
             "target": "80%",
             "actual": percent_string(clean_tech_improved_rate),
             "status": awareness_status,
@@ -619,7 +668,7 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
         },
         {
             "title": "Workplace Readiness",
-            "description": "Participants demonstrating stronger workplace readiness across communication, public speaking, project management, teamwork, research, leadership, and workplace expectations.",
+            "description": "Participants demonstrating stronger workplace readiness across the paired professional-skill ratings in the post-program survey.",
             "target": "85%",
             "actual": percent_string(workplace_improved_rate),
             "status": workplace_status,
@@ -627,7 +676,7 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
         },
         {
             "title": "Career Confidence",
-            "description": "Participants reporting improved confidence in professional and career-related settings, including introductions, interviews, and leadership. Career clarity requires a dedicated survey item to measure directly.",
+            "description": "Participants reporting improved confidence in professional and career-related settings, including networking, communication, presentations, and leadership.",
             "target": "80%",
             "actual": percent_string(confidence_improved_rate),
             "status": confidence_status,
@@ -643,9 +692,7 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
     summary = {
         "cohort_size": cohort_size,
         "interns_served": interns_served or 0,
-        "interns_with_pre_survey": _unique_participants(pre_df),
-        "interns_with_post_survey": _unique_participants(post_df),
-        "matched_pre_post_participants": matched_count,
+        "interns_with_post_program_survey": _unique_participants(post_program_df),
         "matched_response_count": matched_count,
         "weekly_checkin_count": weekly_count,
         "weekly_unique_participants": weekly_unique_participants,
@@ -661,15 +708,15 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
         "average_skill_growth": percent_string(average_skill_growth),
         "clean_tech_growth": percent_string(clean_tech_improved_rate),
         "resume_linkedin_completion": percent_string(both_completion_rate),
-        "interview_confidence_growth": percent_string(interview_improved_rate),
+        "career_confidence_growth": percent_string(confidence_improved_rate),
         "projects_completed": deliverables_total,
         "selected_quote": selected_quote,
         "source_count": len(uploads),
     }
 
     analyst_notes = [
-        "Pre/post comparisons only include matched participants with responses in both survey datasets.",
-        "Career confidence is measurable from the current survey, but career clarity is not directly captured by the current question set.",
+        "Before/after comparisons use each respondent's paired self-ratings from the post-program survey.",
+        "Career confidence is measured from paired networking, communication, presentation, and leadership ratings.",
         "Resume and LinkedIn metrics are calculated from uploaded tracker URLs and staff verification fields, not estimated.",
         "Weekly check-ins and deliverables provide supporting evidence, project activity context, and qualitative reporting themes.",
     ]
@@ -677,7 +724,7 @@ def build_analysis(project: dict[str, Any], uploads: list[UploadDataset]) -> dic
     if not weeks_observed:
         analyst_notes.append("Weekly progress check uploads currently do not include an explicit week field, so engagement is summarized without week-by-week breakdowns.")
     if not matched_count:
-        analyst_notes.append("Before/after outcome comparisons will populate once both Week 1 and Week 8 survey uploads are available for matched participants.")
+        analyst_notes.append("Before/after outcome comparisons will populate once the post-program survey is uploaded.")
 
     return {
         "metrics": metrics,

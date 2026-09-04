@@ -23,16 +23,15 @@ from .upload_schema import serialize_component_schema, validate_component_datafr
 
 
 COMPONENT_CONFIG = {
-    "pre": {"name": "Week 1 Pre-Survey", "type": "Google Form", "extensions": {".csv", ".xlsx"}},
+    "post-program": {"name": "Post-Program Survey", "type": "Google Form", "extensions": {".csv", ".xlsx"}},
     "weekly": {"name": "Weekly Check-In Surveys", "type": "Google Form", "extensions": {".csv", ".xlsx"}},
-    "post": {"name": "Week 8 Post-Survey", "type": "Google Form", "extensions": {".csv", ".xlsx"}},
     "deliverables": {"name": "Deliverables Tracker", "type": "Google Sheet", "extensions": {".csv", ".xlsx"}},
     "resume-linkedin": {"name": "Resume & LinkedIn Completion Tracker", "type": "Google Sheet", "extensions": {".csv", ".xlsx"}},
     "testimonials": {"name": "Testimonials", "type": "Google Form", "extensions": {".csv", ".xlsx"}},
     "photos": {"name": "Photos", "type": "Drive Folder", "extensions": {".zip", ".png", ".jpg", ".jpeg", ".webp"}},
 }
 
-ANALYSIS_VERSION = 4
+ANALYSIS_VERSION = 5
 PHOTO_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 MAX_FEATURED_PHOTOS = 4
 
