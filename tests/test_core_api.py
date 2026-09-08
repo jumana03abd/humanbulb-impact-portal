@@ -4,6 +4,7 @@ import asyncio
 import csv
 import os
 import unittest
+from datetime import datetime
 from io import BytesIO, StringIO
 from unittest.mock import AsyncMock, patch
 
@@ -105,6 +106,22 @@ class CoreApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["detail"], "Report not found.")
         delete_object.assert_not_awaited()
+
+    def test_report_download_streams_the_current_projects_pdf(self) -> None:
+        report_path = "org-1/project-1/reports/report-1.pdf"
+        payload = b"%PDF-1.4 sample report"
+
+        with patch("backend.main.get_or_create_current_project", return_value={"id": "project-1"}), patch(
+            "backend.db.fetch_one",
+            return_value={"storage_path": report_path, "created_at": datetime(2026, 9, 8, 12, 0, 0)},
+        ), patch.object(main.StorageClient, "download_bytes", AsyncMock(return_value=payload)) as download_bytes:
+            response = self.client.get("/api/reports/report-1/download")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, payload)
+        self.assertEqual(response.headers["content-type"], "application/pdf")
+        self.assertIn("humanbulb-grant-summary-20260908-120000.pdf", response.headers["content-disposition"])
+        download_bytes.assert_awaited_once_with(main.settings.supabase_bucket_reports, report_path)
 
     def test_logout_clears_only_the_signed_in_users_workspace(self) -> None:
         with patch("backend.main.reset_current_workspace", AsyncMock()) as reset_workspace:

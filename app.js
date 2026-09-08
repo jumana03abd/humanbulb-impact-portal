@@ -13,9 +13,8 @@ const appState = {
 
 // File extensions allowed per admin workspace upload category.
 const COMPONENT_ACCEPT = {
-  pre: ".csv,.xlsx",
+  "post-program": ".csv,.xlsx",
   weekly: ".csv,.xlsx",
-  post: ".csv,.xlsx",
   deliverables: ".csv,.xlsx",
   "resume-linkedin": ".csv,.xlsx",
   testimonials: ".csv,.xlsx",
@@ -957,33 +956,38 @@ function renderGroupedHorizontalChart(targetId, items, options) {
     );
     return;
   }
-  const width = 1080;
-  const rowHeight = 88;
-  const topPadding = 86;
+  const width = 1220;
+  const rowHeight = 104;
+  const topPadding = 94;
   const bottomPadding = 54;
-  const barHeight = 22;
-  const barGap = 18;
+  const barHeight = 26;
+  const barGap = 16;
   const height = topPadding + Math.max(items.length, 1) * rowHeight + bottomPadding;
-  const labelSpace = 560;
-  const barWidth = width - labelSpace - 86;
+  const labelSpace = 600;
+  const barWidth = 470;
+  const scoreX = labelSpace + barWidth + 18;
+  const changeX = 1120;
 
   const rows = items.map((item, index) => {
     const y = topPadding + index * rowHeight;
     const beforeW = (item.before / options.max) * barWidth;
     const afterW = (item.after / options.max) * barWidth;
+    const change = item.after - item.before;
     return `
-      <text class="axis-label axis-label-large" x="22" y="${y + 30}">${item.label}</text>
-      <rect x="${labelSpace}" y="${y}" width="${beforeW}" height="${barHeight}" rx="11" fill="${options.colors[0]}"></rect>
-      <rect x="${labelSpace}" y="${y + barHeight + barGap}" width="${afterW}" height="${barHeight}" rx="11" fill="${options.colors[1]}"></rect>
-      <text class="axis-label" x="${labelSpace + beforeW + 14}" y="${y + 16}">${item.before.toFixed(1)}</text>
-      <text class="axis-label" x="${labelSpace + afterW + 14}" y="${y + barHeight + barGap + 16}">${item.after.toFixed(1)}</text>
+      <text class="chart-skill-label" x="22" y="${y + 35}">${item.label}</text>
+      <rect x="${labelSpace}" y="${y}" width="${beforeW}" height="${barHeight}" rx="13" fill="${options.colors[0]}"></rect>
+      <rect x="${labelSpace}" y="${y + barHeight + barGap}" width="${afterW}" height="${barHeight}" rx="13" fill="${options.colors[1]}"></rect>
+      <text class="chart-score chart-score-before" x="${scoreX}" y="${y + 19}">${item.before.toFixed(1)}</text>
+      <text class="chart-score chart-score-after" x="${scoreX}" y="${y + barHeight + barGap + 19}">${item.after.toFixed(1)}</text>
+      <text class="chart-change" x="${changeX}" y="${y + 38}">${change >= 0 ? "+" : ""}${change.toFixed(1)}</text>
     `;
   }).join("");
 
   el.innerHTML = `
     <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Before and after comparison chart" preserveAspectRatio="xMinYMin meet">
-      <text class="axis-label" x="${labelSpace}" y="34">${options.labels[0]}</text>
-      <text class="axis-label" x="${labelSpace}" y="64">${options.labels[1]}</text>
+      <text class="chart-series-label" x="${labelSpace}" y="34">${options.labels[0]}</text>
+      <text class="chart-series-label" x="${labelSpace}" y="66">${options.labels[1]}</text>
+      <text class="chart-change-label" x="${changeX}" y="50">Change</text>
       ${rows}
     </svg>
   `;
@@ -1001,14 +1005,14 @@ function renderStackedBars(targetId, items) {
     );
     return;
   }
-  const width = 1100;
-  const height = 520;
-  const chartTop = 168;
-  const barHeight = 62;
-  const barRadius = 22;
-  const barWidth = 340;
-  const gap = 140;
-  const startX = 72;
+  const width = 1200;
+  const height = 600;
+  const chartTop = 188;
+  const barHeight = 74;
+  const barRadius = 26;
+  const barWidth = 410;
+  const gap = 150;
+  const startX = 76;
   const secondX = startX + barWidth + gap;
   const totals = {
     before: items.reduce((sum, item) => sum + item.before, 0) || 1,
@@ -1026,16 +1030,16 @@ function renderStackedBars(targetId, items) {
     }).join("");
 
     return `
-      <text class="axis-label axis-label-large" x="${x}" y="132">${label}</text>
+      <text class="distribution-title" x="${x}" y="142">${label}</text>
       ${rects}
-      <text class="axis-label" x="${x}" y="${chartTop + barHeight + 44}">100% of response distribution</text>
+      <text class="distribution-note" x="${x}" y="${chartTop + barHeight + 48}">100% of response distribution</text>
     `;
   }
 
-  const legendTop = chartTop + barHeight + 92;
+  const legendTop = chartTop + barHeight + 108;
   const legend = items.map((item, index) => `
-    <rect x="${startX}" y="${legendTop + index * 56}" width="24" height="24" rx="7" fill="${colors[index]}"></rect>
-    <text class="axis-label axis-label-large" x="${startX + 42}" y="${legendTop + 19 + index * 56}">${item.label}</text>
+    <rect x="${startX}" y="${legendTop + index * 66}" width="30" height="30" rx="9" fill="${colors[index]}"></rect>
+    <text class="distribution-legend" x="${startX + 48}" y="${legendTop + 23 + index * 66}">${item.label}</text>
   `).join("");
 
   el.innerHTML = `

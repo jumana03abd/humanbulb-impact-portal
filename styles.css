@@ -1504,22 +1504,82 @@ body::after {
 }
 
 .grant-metric {
-  align-items: flex-start;
-  min-height: 112px;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  align-items: center;
+  min-height: 104px;
+  overflow: hidden;
 }
 
 .grant-metric strong {
-  display: block;
-  font-size: clamp(1.8rem, 2vw, 2.35rem);
-  line-height: 1.05;
+  display: inline-block;
+  flex: 0 0 auto;
+  font-size: clamp(1.8rem, 2.4vw, 2.5rem);
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .grant-metric span {
   display: block;
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--muted);
-  line-height: 1.45;
+  line-height: 1.25;
+}
+
+.chart-skill-label {
+  fill: #1d3557;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.chart-series-label {
+  fill: #486174;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.chart-score {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.chart-score-before {
+  fill: #715900;
+}
+
+.chart-score-after {
+  fill: #146c43;
+}
+
+.chart-change {
+  fill: #146c43;
+  font-size: 19px;
+  font-weight: 800;
+  text-anchor: middle;
+}
+
+.chart-change-label {
+  fill: #486174;
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.distribution-title {
+  fill: #1d3557;
+  font-size: 23px;
+  font-weight: 700;
+}
+
+.distribution-note {
+  fill: #486174;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.distribution-legend {
+  fill: #1d3557;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .grant-list {
