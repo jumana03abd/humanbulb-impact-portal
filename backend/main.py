@@ -368,6 +368,7 @@ async def download_report(report_id: str, user: AuthenticatedUser = Depends(auth
     from .db import fetch_one
     from datetime import datetime
 
+    project = get_or_create_current_project(user)
     report = fetch_one(
         """
         select storage_path, created_at
