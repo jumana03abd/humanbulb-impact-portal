@@ -4,6 +4,7 @@ import asyncio
 import csv
 import os
 import unittest
+import zipfile
 from datetime import datetime
 from io import BytesIO, StringIO
 from unittest.mock import AsyncMock, patch
@@ -210,6 +211,31 @@ class CoreApiTests(unittest.TestCase):
 
         self.assertEqual(result, stored_record)
         upload_bytes.assert_awaited_once()
+
+    def test_photo_zip_streams_from_the_spooled_upload_without_copying_the_archive_into_memory(self) -> None:
+        archive_buffer = BytesIO()
+        with zipfile.ZipFile(archive_buffer, "w") as archive:
+            archive.writestr("program-photo.jpg", b"sample image data")
+        uploaded_file = UploadFile(filename="program-photos.zip", file=BytesIO(archive_buffer.getvalue()))
+        stored_record = {"id": "upload-photos", "filename": "program-photos.zip"}
+        photo_settings = main.settings.model_copy(update={"max_upload_size_mb": 0, "photo_upload_size_mb": 1})
+
+        with patch("backend.services.get_settings", return_value=photo_settings), patch.object(
+            uploaded_file, "read", AsyncMock(side_effect=AssertionError("ZIP uploads should not be copied into memory"))
+        ), patch.object(services.StorageClient, "upload_bytes", AsyncMock()) as upload_bytes, patch(
+            "backend.services.execute_returning", return_value=stored_record
+        ), patch("backend.services.execute"):
+            result = asyncio.run(
+                services.save_upload(
+                    self.authenticated_user(),
+                    {"id": "project-1"},
+                    "photos",
+                    uploaded_file,
+                )
+            )
+
+        self.assertEqual(result, stored_record)
+        self.assertEqual(upload_bytes.await_count, 2)
 
     def test_post_program_survey_produces_paired_before_after_results(self) -> None:
         dataframe = read_spreadsheet("post-program-survey.csv", post_program_survey_csv())

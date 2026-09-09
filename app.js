@@ -496,7 +496,10 @@ function wireSimpleSetup() {
           await prepareDashboardAndContinue(false);
         }
       } catch (error) {
-        const uploadErrorMessage = error.message || "Upload failed.";
+        const photoUploadInterrupted = componentId === "photos" && error?.message === "Failed to fetch";
+        const uploadErrorMessage = photoUploadInterrupted
+          ? "Photo upload was interrupted. Please retry the ZIP; photo archives up to 75 MB are supported."
+          : error?.message || "Upload failed.";
         const componentName = appState.setupComponents.find((item) => item.id === componentId)?.name || "Upload";
         setComponentUploadError(componentId, uploadErrorMessage);
         renderSimpleSetup();

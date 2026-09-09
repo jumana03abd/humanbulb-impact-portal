@@ -5,9 +5,8 @@ import mimetypes
 import random
 import zipfile
 from datetime import datetime, timezone
-from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 from uuid import uuid4
 
 from fastapi import HTTPException, UploadFile, status
@@ -87,12 +86,12 @@ async def extract_zip_featured_images(
     storage: StorageClient,
     bucket_name: str,
     storage_prefix: str,
-    archive_bytes: bytes,
+    archive_source: BinaryIO,
     seed: str,
 ) -> dict[str, Any]:
     """Pick a few random images from an uploaded ZIP so staff can upload a photo folder directly."""
     try:
-        archive = zipfile.ZipFile(BytesIO(archive_bytes))
+        archive = zipfile.ZipFile(archive_source)
     except zipfile.BadZipFile as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Photos ZIP could not be opened.") from exc
 
@@ -145,6 +144,15 @@ async def extract_zip_featured_images(
     if not featured_images:
         summary["preview_warning"] = "Photo ZIP uploaded, but preview images could not be generated from the archive."
     return summary
+
+
+def upload_size_bytes(file: UploadFile) -> int:
+    """Measure a spooled upload without copying its full contents into memory."""
+    current_position = file.file.tell()
+    file.file.seek(0, 2)
+    size = file.file.tell()
+    file.file.seek(current_position)
+    return size
 
 
 def find_current_workspace(user: AuthenticatedUser) -> dict[str, Any] | None:
@@ -377,17 +385,19 @@ async def save_upload(user: AuthenticatedUser, project: dict[str, Any], componen
 
     settings = get_settings()
     storage = StorageClient(settings)
-    content = await file.read()
-    if not content:
+    file_size = upload_size_bytes(file)
+    if not file_size:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
 
-    max_bytes = settings.max_upload_size_mb * 1024 * 1024
-    if len(content) > max_bytes:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"File exceeds {settings.max_upload_size_mb} MB limit.")
+    max_upload_size_mb = settings.photo_upload_size_mb if component == "photos" else settings.max_upload_size_mb
+    max_bytes = max_upload_size_mb * 1024 * 1024
+    if file_size > max_bytes:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"File exceeds {max_upload_size_mb} MB limit.")
 
     upload_id = str(uuid4())
     file_name = Path(file.filename or 'upload').name
     storage_path = f"{user.organization_id}/{project['id']}/{component}/{upload_id}-{file_name}"
+    content = b""
     stored_content = content
     stored_content_type = file.content_type or guess_content_type(file_name)
 
@@ -395,6 +405,8 @@ async def save_upload(user: AuthenticatedUser, project: dict[str, Any], componen
     parsed_summary: dict[str, Any] | None = None
     source_kind = "binary"
     if suffix in {".csv", ".xlsx"}:
+        content = await file.read()
+        stored_content = content
         source_kind = "spreadsheet"
         try:
             dataframe = read_spreadsheet(file.filename or "upload", content)
@@ -424,7 +436,7 @@ async def save_upload(user: AuthenticatedUser, project: dict[str, Any], componen
                     storage,
                     settings.supabase_bucket_uploads,
                     f"{user.organization_id}/{project['id']}/{component}/{upload_id}-assets",
-                    content,
+                    file.file,
                     upload_id,
                 )
             except HTTPException:
@@ -448,6 +460,8 @@ async def save_upload(user: AuthenticatedUser, project: dict[str, Any], componen
             stored_content = json.dumps(manifest_payload).encode("utf-8")
             stored_content_type = "application/json"
         else:
+            content = await file.read()
+            stored_content = content
             parsed_summary = {
                 "image_count": 1,
                 "featured_images": [
@@ -483,7 +497,7 @@ async def save_upload(user: AuthenticatedUser, project: dict[str, Any], componen
             file.filename,
             storage_path,
             file.content_type or "application/octet-stream",
-            len(content),
+            file_size,
             suffix,
             source_kind,
             row_count,

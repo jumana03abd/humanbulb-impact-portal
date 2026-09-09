@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     openai_model: str = Field(default="gpt-5-mini", alias="OPENAI_MODEL")
 
     max_upload_size_mb: int = Field(default=15, alias="MAX_UPLOAD_SIZE_MB")
+    photo_upload_size_mb: int = Field(default=75, alias="MAX_PHOTO_UPLOAD_SIZE_MB")
     allowed_image_types: str = Field(default=".png,.jpg,.jpeg,.webp", alias="ALLOWED_IMAGE_TYPES")
 
 
